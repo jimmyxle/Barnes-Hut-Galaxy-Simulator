@@ -4,6 +4,7 @@
 class Vector2D
 {
 public:
+	void print();
 	Vector2D();
 	Vector2D(double xvar, double yvar);
 	~Vector2D()= default;
