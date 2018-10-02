@@ -3,6 +3,7 @@
 #include "ParticleData.h"
 #include <vector>
 
+
 class QuadNode
 {
 public:
@@ -38,8 +39,7 @@ private:
 
 	ParticleData* particle;
 	Vector2D topLeft;
-	Vector2D topRight;
-	Vector2D botLeft;
+	Vector2D center;
 	Vector2D botRight;
 
 	QuadNode* parent;

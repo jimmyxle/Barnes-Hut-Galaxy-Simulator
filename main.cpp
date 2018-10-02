@@ -32,33 +32,36 @@ void recursiveBoxes( QuadNode& qt, double factor)
 	//std::cout << factor * qt.getVector(0).x <<"\t"<< factor*qt.getVector(0).y << std::endl;
 	//std::cout << "1\t";
 
-	
+	//4 children, 0 NE, 2SE, 
 //std::cout << factor * qt.getVector(1).x <<"\t"<< factor*qt.getVector(1).y << std::endl;
 	glBegin(GL_POLYGON);
 	glVertex2d( factor*qt.getVector(0).x, factor*qt.getVector(0).y);
-	glVertex2d( factor*qt.getVector(1).x, factor*qt.getVector(1).y);
+	glVertex2d( factor*qt.getVector(2).x, factor*qt.getVector(0).y);
+	glVertex2d(factor*qt.getVector(2).x, factor*qt.getVector(2).y);
+	glVertex2d(factor*qt.getVector(0).x, factor*qt.getVector(2).y);
 
 	//std::cout << "3\t";
 
 	//std::cout << factor * qt.getVector(3).x << "\t" << factor * qt.getVector(3).y << std::endl;
-	glVertex2d( factor*qt.getVector(1).x, factor*qt.getVector(1).y);
-	glVertex2d(factor*qt.getVector(3).x, factor*qt.getVector(3).y);
+
 
 	//std::cout << "2\t";
 
 	//std::cout << factor * qt.getVector(2).x << "\t" << factor * qt.getVector(2).y << std::endl;
+	/*
 	glVertex2d(factor*qt.getVector(3).x, factor*qt.getVector(3).y);
 	glVertex2d(factor*qt.getVector(2).x, factor*qt.getVector(2).y);
 
 	glVertex2d(factor*qt.getVector(2).x, factor*qt.getVector(2).y);
 	glVertex2d(factor*qt.getVector(0).x, factor*qt.getVector(0).y);
 	//std::cout << "\n";
+	*/
 	glEnd();
 
 	for (std::vector<QuadNode*>::iterator it = (qt).nodeArr.begin();
 		it != (qt).nodeArr.end(); it++)
 	{
-		recursiveBoxes( *(*it) , 0.99 );
+		recursiveBoxes( *(*it) , 1.0 );
 	}
 }
 
@@ -69,12 +72,12 @@ void displayQuadrant( QuadNode& quad)
 	//clear color and depth buffer
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor3f(255, 0, 0);
-	glPointSize(2);
+	glPointSize(1);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 
 
-	 recursiveBoxes(quad, 0.99);
+	 recursiveBoxes(quad, 1.0);
 	
 
 	 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -101,11 +104,16 @@ int main()
 
 	while (repeat)
 	{
-		const int NUMBER_PARTICLES = 12;
+
+		const int NUMBER_PARTICLES = 100;
 
 		ParticleData particle;
 		std::vector<ParticleData*> allParticles =
 			particle.generateParticles(NUMBER_PARTICLES, 1);
+		allParticles.reserve(NUMBER_PARTICLES);
+
+
+
 
 
 		Vector2D* max = new Vector2D(1, -1);
@@ -157,7 +165,6 @@ int main()
 
 
 
-
 		std::cout << "Enter '1' to repeat..." << std::endl;
 
 		std::cin >> a;
@@ -165,6 +172,7 @@ int main()
 		{
 			repeat = false;
 		}
+
 	}
 	//----------------------
 	

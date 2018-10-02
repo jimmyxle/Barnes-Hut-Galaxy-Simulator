@@ -10,7 +10,7 @@ QuadNode::QuadNode()
 {
 	std::cout << "Default constructor used" << std::endl;
 	particle = nullptr;
-	botLeft = botRight = topRight = topLeft = Vector2D();
+	center = botRight  = topLeft = Vector2D();
 	parent = nullptr;
 	nodeArr.reserve(4);
 	divided = false;
@@ -25,8 +25,7 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, Quad
 	particle = nullptr;
 
 	topLeft = min;
-	topRight = Vector2D(max.x, min.y);
-	botLeft = Vector2D(min.x, max.y);
+	center = Vector2D(min.x + (max.x-min.x)/2.0, min.y + ( max.y-min.y)/2.0 ) ;
 	botRight = max;
 	
 	parent = _parent;
@@ -56,21 +55,34 @@ bool QuadNode::contains(ParticleData &_particle)
 {
 	double p_x = (&_particle)->xy->x;
 	double p_y = (&_particle)->xy->y;
-	
-	std::cout << "Contains begins on ";
 
-	std::cout << p_x << "," << p_y << std::endl;
 
-	std::cout << "checked against (" <<
-		this->topLeft.x << " , " << this->topLeft.y << ") and (" <<
-		this->botRight.x << " , " << this->botRight.y << ")\n";
-		
-	return	p_x >= this->topLeft.x &&
-			p_x <= this->botRight.x &&
-			p_y >= this->botRight.y &&
-			p_y <= this->topLeft.y;
-			
+
+
+
+
+	if (p_x >= this->topLeft.x &&
+		p_x <= this->botRight.x &&
+		p_y >= this->botRight.y &&
+		p_y <= this->topLeft.y)
+	{
+//		std::cout << "found it ! " << std::endl;
+		return true;
+	}
+	else
+	{
+		/*
+		std::cout << p_x << "," << p_y << std::endl;
+		std::cout << " not found in (" <<
+			this->topLeft.x << " , " << this->topLeft.y << ") and (" <<
+			this->botRight.x << " , " << this->botRight.y << ")\n";
+			*/
+		return false;
+
+	}
 }
+
+
 
 void QuadNode::insert(ParticleData &newParticle)
 {
@@ -123,7 +135,8 @@ void QuadNode::insert(ParticleData &newParticle)
 		}
 		else
 		{
-			std::cout << "a: Error not contained within this quadrant." << std::endl;
+
+			std::cerr << "a: Error not contained within this quadrant." << std::endl;
 		}
 	}
 	else if (this->numParticles == 1)
@@ -135,15 +148,18 @@ void QuadNode::insert(ParticleData &newParticle)
 			std::cout << "split" << std::endl;
 			this->subdivide();
 		}
-		/*
-		if (this->particle->xy.x == newParticle.xy.x &&
-			this->particle->xy.y == newParticle.xy.y)
+		if ((particle)->xy->x == newParticle.xy->x &&
+			this->particle->xy->y == newParticle.xy->y)
 		{
+			std::cout << "same particle found " << std::endl;
+			newParticle.xy->x += 0.05;
+			newParticle.xy->y += 0.05;
+
 
 		}
 		//check if exactly the same
 			//do soemthing
-		*/
+		
 		//std::cout << "Handle old particle ::" << (particle)->xy->x << std::endl;
 		//find quadrant of original
 			//insert on that
@@ -185,7 +201,9 @@ void QuadNode::insert(ParticleData &newParticle)
 		}
 		else
 		{
-			std::cout << "b: Error not contained within this quadrant." << std::endl;
+
+			std::cerr << "b: Error not contained within this quadrant." << std::endl;
+
 		}
 		//std::cout << "Handle new particle =" << (&newParticle)->xy->x << std::endl;
 
@@ -222,7 +240,8 @@ void QuadNode::insert(ParticleData &newParticle)
 		}
 		else
 		{
-			std::cout << "c: Error not contained within this quadrant." << std::endl;
+			std::cerr << "c: Error not contained within this quadrant." << std::endl;
+
 		}
 	}
 	else if (this->numParticles == 0)
@@ -247,50 +266,53 @@ Vector2D QuadNode::getVector(int n)
 		return topLeft;
 		break;
 	case 1:
-		return topRight;
+		return center;
 		break;
 	case 2:
-		return botLeft;
-		break;
-	case 3:
 		return botRight;
+		break;
+	default:
+		std::cout << "Error in getvector()" << std::endl;
+		break;
 	}
 }
 
 
 void QuadNode::subdivide()
 {
+	/*
 	std::cout << "subdivide begins" << std::endl;
 
-	double width = abs(topLeft.x) + abs(topRight.x);
-	double height = abs(topLeft.y) + abs(botLeft.y);
+	double width = abs(topLeft.x) + abs(botRight.x);
+	double height = abs(topLeft.y) + abs(botRight.y);
 
 	std::cout << "Width: " << width << std::endl;
 	std::cout << "Height: "<< height << std::endl;
 
 	Vector2D temp_topLeft = topLeft;
 	Vector2D temp_botRight = botRight;
+	*/
 
 
 	//NE
-	Vector2D new_min = Vector2D(temp_botRight.x - (width / 2.0), temp_topLeft.y );
-	Vector2D new_max = Vector2D(temp_botRight.x, temp_botRight.y + (height / 2.0));
+	Vector2D new_min = Vector2D(center.x, topLeft.y );
+	Vector2D new_max = Vector2D(botRight.x, center.y);
 	nodeArr.push_back(  new QuadNode(new_min, new_max, NE , this) ) ;
 
 	//NW
-	new_min = temp_topLeft;
-	new_max = Vector2D( (temp_topLeft.x + (width/2.0) ),(temp_topLeft.y - (height/2.0) ) ) ;
+	new_min = topLeft;
+	new_max = center;
 	nodeArr.push_back(new QuadNode(new_min, new_max,NW,  this));
 
 	//SE
 
-	new_min = Vector2D(temp_botRight.x - (width / 2.0), temp_botRight.y + (height / 2.0));
-	new_max = temp_botRight;
+	new_min = center;
+	new_max = botRight;
 	nodeArr.push_back(new QuadNode(new_min, new_max, SE,this));
 
 	//SW
-	new_min = Vector2D(temp_topLeft.x, temp_topLeft.y - height / 2.0);
-	new_max = Vector2D(temp_topLeft.x + (width / 2.0), temp_botRight.y);
+	new_min = Vector2D(topLeft.x, center.y);
+	new_max = Vector2D(center.x , botRight.y);
 	nodeArr.push_back(new QuadNode(new_min, new_max, SW, this));
 
 
@@ -298,9 +320,11 @@ void QuadNode::subdivide()
 
 	this->divided = true;
 	this->numSubdivisions++;
-	
+	/*
 	std::cout << "subdivisions: "<<numSubdivisions << std::endl;
 	std::cout << "subdivide ends" << std::endl;
+	*/
 	
 }
+
 
