@@ -1,10 +1,14 @@
 ﻿#include "Tree.h"
 #include <cstdlib>
+#include <cmath>
+#include <stdexcept>
+
 /*
 static/global variables go here 
 */
 
-double QuadNode::theta = 0.9; //why 0.9 ?
+const double _THETA = 0.9; //why 0.9 ?
+const double G_CONST = 6.674 * pow(10.0, -11.0);
 
 
 QuadNode::QuadNode()
@@ -274,6 +278,8 @@ Vector2D QuadNode::getVector(int n)
 		break;
 	default:
 		std::cout << "Error in getvector()" << std::endl;
+		std::string str = "Error in getVector()";
+		throw std::invalid_argument(str);
 		break;
 	}
 }
@@ -356,11 +362,117 @@ void QuadNode::computeMassDistribution()
 	}
 }
 
-void QuadNode::calcForce()
-{
 
+Vector2D QuadNode::calcForce(ParticleData& _particle)
+{
+	Vector2D force1 = this->calcForceTree(_particle);
+
+	//include osmething for renegade stuff
+	 return force1;
 }
 
+
+Vector2D QuadNode::calcForceTree(ParticleData& _particle)
+{
+	Vector2D force2 = Vector2D();
+
+	if (numParticles == 1)
+	{
+		force2 =  calcAcceleration(*particle, _particle);
+		//add debug stuff but not needed here yet
+	}
+	else
+	{
+		double x1 = particle->xy->x;
+		double y1 = particle->xy->y;
+		double x2 = _particle.xy->x;
+		double y2 = _particle.xy->y;
+		double mass1 = particle->mState;
+		double mass2 = _particle.mState;
+
+		double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
+		double d = abs(topLeft.x) + abs(botRight.x);
+
+		double theta = d / r;
+		if (theta <= _THETA)
+		{
+			double k = G_CONST*(mass1 * mass2) / (r*r);
+			force2.x += k* (x2 - x1);
+			force2.y += k* (y2 - y1);
+
+			//add number of calc for debug
+		}
+		else
+		{
+			// subdivided = true
+			Vector2D partial;
+			for (std::vector<QuadNode*>::iterator it = nodeArr.begin(); 
+				it != nodeArr.end(); it++)
+			{
+				if (*it)
+				{
+					partial = (*it)->calcForceTree(_particle);
+					force2.x += partial.x;
+					force2.y += partial.y;
+
+				}
+			}
+
+		}
+
+
+		/*
+			r = distance between particles
+			d = length of quadrant 
+			if d/r <= theta 
+				its okay to use this 
+				subdivided = false
+				do 
+			else
+				subdivided = true
+				make vector*
+				for each quadrant with a point int it
+				vector* = calctreeforce
+				force.x += vector.x
+				same for y
+				}
+		*/
+	}
+	return force2;
+}
+
+
+//new particle acting on this 
+Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
+{
+	Vector2D force3;
+	double x1 = _particle1.xy->x;
+	double y1 = _particle1.xy->y;
+	double x2 = _particle2.xy->x;
+	double y2 = _particle2.xy->y;
+	double mass1 = _particle1.mState;
+	double mass2 = _particle2.mState;
+
+	double r = sqrt( (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) );
+
+	if (x1 == x2 && y1 == y2)
+	{
+		return force3 = Vector2D();
+	}
+	else if (r > 0)
+	{
+		double k = G_CONST *( ( mass1 * mass2 )/ r*r);
+		force3.x += k*(x2 - x1);
+		force3.y += k*(y2 - y1);
+
+	}
+	else
+	{
+		//not possible if two particles are too close together
+		force3.x = force3.y = 0; 
+	}
+	return force3;
+}
 /*
 
 Function MainApp::CalcForce
@@ -386,5 +498,6 @@ end for
 end if
 end
 end
+
 */
 

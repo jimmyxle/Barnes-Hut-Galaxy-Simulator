@@ -24,7 +24,10 @@ public:
 	bool contains(ParticleData &particle);
 
 	void computeMassDistribution();
-	void calcForce();
+	Vector2D calcForce(ParticleData& _particle);
+	Vector2D calcForceTree( ParticleData& _particle);
+	Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2); //new particle acting on this
+
 
 	// variables
 	std::vector<QuadNode*> nodeArr; //4 children, 0 NE, 1 NW, 2SE, 3 SW
@@ -38,7 +41,6 @@ private:
 	Vector2D center;
 	Vector2D botRight;
 
-	static double theta;
 
 	Vector2D COM; //center of mass
 	double totalMass;
@@ -51,6 +53,8 @@ private:
 	// int mass;
 	// Vector2D centerMass;
 	// Vector2D center; //not yet
+
+	//subdivded use for force calculation. true if too close for approx
 
 };
 
