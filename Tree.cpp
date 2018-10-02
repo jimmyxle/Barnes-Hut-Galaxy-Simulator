@@ -1,11 +1,12 @@
-#include "Tree.h"
+﻿#include "Tree.h"
 #include <cstdlib>
 /*
 static/global variables go here 
-
-
-
 */
+
+double QuadNode::theta = 0.9; //why 0.9 ?
+
+
 QuadNode::QuadNode()
 {
 	std::cout << "Default constructor used" << std::endl;
@@ -327,4 +328,63 @@ void QuadNode::subdivide()
 	
 }
 
+void QuadNode::computeMassDistribution()
+{
+	// std::cout << "num of particles: " << numParticles << std::endl;
+	if (numParticles == 1)
+	{
+		COM = *(particle->xy);
+		totalMass = particle->mState;
+		// std::cout << "COM is (" << COM.x << "," << COM.y << ")" << std::endl;
+	}
+	else
+	{
+		for (std::vector<QuadNode*>::iterator it = nodeArr.begin(); it != nodeArr.end(); 
+			it++)
+		{
+			if ( (*it) )
+			{
+
+				(*it)->computeMassDistribution();
+				totalMass += (*it)->totalMass;
+				COM.x += (*it)->totalMass*(*it)->COM.x;
+				COM.y += (*it)->totalMass*(*it)->COM.y;
+			}
+		}
+		COM.x /= totalMass;
+		COM.y /= totalMass;
+	}
+}
+
+void QuadNode::calcForce()
+{
+
+}
+
+/*
+
+Function MainApp::CalcForce
+for all particles
+force = RootNode.CalculateForceFromTree(particle)
+end for
+end
+
+Function force = TreeNode::CalculateForce(targetParticle)
+force = 0
+
+if number of particle equals 1
+force = Gravitational force between targetParticle and particle
+else
+r = distance from nodes center of mass to targetParticle
+d = height of the node
+if (d/r < θ)
+force = Gravitational force between targetParticle and node
+else
+for all child nodes n
+force += n.CalculateForce(particle)
+end for
+end if
+end
+end
+*/
 

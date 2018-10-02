@@ -85,6 +85,34 @@ void displayQuadrant( QuadNode& quad)
 	glPopMatrix();
 }
 
+int display(std::vector<ParticleData*> allParticles, QuadNode* root)
+{
+	GLFWwindow* window;
+	if (!glfwInit())
+	{
+		std::cout << "Error Initializing GLFW" << std::endl;
+		return -1;
+	}
+	window = glfwCreateWindow(500, 500, "Barnes-Hut Tree", NULL, NULL);
+	if (!window)
+	{
+		std::cout << "Error creating window" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+	glfwMakeContextCurrent(window);
+
+	while (!glfwWindowShouldClose(window))
+	{
+		displayParticles(allParticles);
+		displayQuadrant(*root);
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+
+	}
+	glfwTerminate();
+}
 
 
 
@@ -105,7 +133,7 @@ int main()
 	while (repeat)
 	{
 
-		const int NUMBER_PARTICLES = 100;
+		const int NUMBER_PARTICLES = 25;
 
 		ParticleData particle;
 		std::vector<ParticleData*> allParticles =
@@ -131,37 +159,13 @@ int main()
 
 
 
+		display(allParticles, root);
 
-
-
-
-		GLFWwindow* window;
-		if (!glfwInit())
-		{
-			std::cout << "Error Initializing GLFW" << std::endl;
-			return -1;
-		}
-		window = glfwCreateWindow(500, 500, "Barnes-Hut Tree", NULL, NULL);
-		if (!window)
-		{
-			std::cout << "Error creating window" << std::endl;
-			glfwTerminate();
-			return -1;
-		}
-		glfwMakeContextCurrent(window);
-
-		while (!glfwWindowShouldClose(window))
-		{
-			//function
-			displayParticles(allParticles);
-			displayQuadrant(*root);
-
-			glfwSwapBuffers(window);
-			glfwPollEvents();
-
-		}
-		glfwTerminate();
-
+		/*
+			center of mass calculations
+		*/
+		std::cout << "center of mass calculations\n" << std::endl;
+		root->computeMassDistribution();
 
 
 

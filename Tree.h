@@ -16,20 +16,16 @@ public:
 	~QuadNode();
 
 	void reset(const Vector2D &min, const Vector2D &max);
-	/*
-	bool isRoot() const;
-	const Vector2D& getMin() const;
-	const Vector2D& getMax() const;
-	*/
+
 
 	void insert( ParticleData &newParticle);
 
 	void subdivide();
 	bool contains(ParticleData &particle);
-	/*
-	Quadrant getQuadrant(int x, int y) const;
-	QuadNode* createQuadeNode(const ParticleData &p) const; //why &p
-	*/
+
+	void computeMassDistribution();
+	void calcForce();
+
 	// variables
 	std::vector<QuadNode*> nodeArr; //4 children, 0 NE, 1 NW, 2SE, 3 SW
 	Vector2D getVector(int n);
@@ -41,6 +37,11 @@ private:
 	Vector2D topLeft;
 	Vector2D center;
 	Vector2D botRight;
+
+	static double theta;
+
+	Vector2D COM; //center of mass
+	double totalMass;
 
 	QuadNode* parent;
 	bool divided; 
