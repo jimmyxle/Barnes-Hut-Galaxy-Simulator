@@ -11,7 +11,7 @@ public:
 		NE,NW,SE,SW,NONE
 	};
 	QuadNode();
-	QuadNode(const Vector2D &min, const Vector2D &max, QuadNode* _parent = nullptr );
+	QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, QuadNode* _parent = nullptr);
 	~QuadNode();
 
 	void reset(const Vector2D &min, const Vector2D &max);
@@ -45,7 +45,8 @@ private:
 	QuadNode* parent;
 	bool divided; 
 	int numParticles;
-
+	int numSubdivisions;
+	Quadrant QUADRANT;
 	// int mass;
 	// Vector2D centerMass;
 	// Vector2D center; //not yet

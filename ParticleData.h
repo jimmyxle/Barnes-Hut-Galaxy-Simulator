@@ -23,10 +23,10 @@ public:
 	void reset();
 	bool isNull() const;
 	void printParticle();
-	std::vector<ParticleData*> generateParticles(int n);
+	std::vector<ParticleData*> generateParticles(int n, double factor);
 
 
-	Vector2D xy;
+	Vector2D* xy;
 //	int vx; //velocities
 //	int vy;
 
