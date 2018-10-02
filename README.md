@@ -1,3 +1,14 @@
+fourth commit
+task completed:
+fixed opengl bug
+fixed tree bug when two particles on top of each other (implement regenade vector)
+wrote compute center of mass
+
+
+to do:
+renegades vector
+calculate forces 
+
 First commit
 
 tasks completed:
