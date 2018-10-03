@@ -30,7 +30,7 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, Quad
 	particle = nullptr;
 
 	topLeft = min;
-	center = Vector2D(min.x + (max.x-min.x)/2.0, min.y + ( max.y-min.y)/2.0 ) ;
+	center = Vector2D( (min.x + (max.x-min.x)/2.0) , (min.y + (max.y-min.y)/2.0) );
 	botRight = max;
 	
 	parent = _parent;
@@ -40,13 +40,6 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, Quad
 	numParticles = 0;
 	numSubdivisions = 0;
 	QUADRANT = quad;
-
-
-	/*
-	mass = 0;
-	centerMass = Vector2D();
-	center = Vector2D((min.x + (max.x - min.x) / 2.0), (min.y + (max.y - min.y) / 2.0));
-	*/
 }
 QuadNode::~QuadNode()
 {
@@ -116,8 +109,8 @@ void QuadNode::insert(ParticleData &newParticle)
 		{
 			this->subdivide();
 		}
-		newParticle.printParticle();
-		std::cout << "\n";
+//		newParticle.printParticle();
+	//	std::cout << "\n";
 
 
 		if (this->nodeArr[0]->contains(newParticle)) 
@@ -150,13 +143,13 @@ void QuadNode::insert(ParticleData &newParticle)
 
 		if (this->nodeArr.size() == 0 && this->divided == false)
 		{
-			std::cout << "split" << std::endl;
+		//	std::cout << "split" << std::endl;
 			this->subdivide();
 		}
 		if ((particle)->xy->x == newParticle.xy->x &&
 			this->particle->xy->y == newParticle.xy->y)
 		{
-			std::cout << "same particle found " << std::endl;
+	//		std::cout << "same particle found " << std::endl;
 			newParticle.xy->x += 0.05;
 			newParticle.xy->y += 0.05;
 
@@ -170,8 +163,8 @@ void QuadNode::insert(ParticleData &newParticle)
 			//insert on that
 			//remove pointer
 
-		particle->printParticle(); 
-		std::cout << "\n";
+	//	particle->printParticle(); 
+	//	std::cout << "\n";
 
 
 		if (this->nodeArr[0]->contains( *particle ))
@@ -214,8 +207,8 @@ void QuadNode::insert(ParticleData &newParticle)
 
 			//find quadrant of new
 			//insert on new
-		newParticle.printParticle();
-		std::cout << "\n";
+	//	newParticle.printParticle();
+//		std::cout << "\n";
 
 		if (this->nodeArr[0]->contains(newParticle))
 		{
@@ -252,8 +245,8 @@ void QuadNode::insert(ParticleData &newParticle)
 	else if (this->numParticles == 0)
 	{
 		//std::cout << " == 0 " << std::endl;
-		newParticle.printParticle();
-		std::cout << "\n";
+//		newParticle.printParticle();
+//		std::cout << "\n";
 		this->particle = &newParticle;
 	}
 	numParticles++;
@@ -383,11 +376,12 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 	}
 	else
 	{
-		double x1 = particle->xy->x;
-		double y1 = particle->xy->y;
+		//there should be a check here 
+		double x1 = COM.x;
+		double y1 = COM.y;
 		double x2 = _particle.xy->x;
 		double y2 = _particle.xy->y;
-		double mass1 = particle->mState;
+		double mass1 = this->totalMass;
 		double mass2 = _particle.mState;
 
 		double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
@@ -406,7 +400,7 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 		{
 			// subdivided = true
 			Vector2D partial;
-			for (std::vector<QuadNode*>::iterator it = nodeArr.begin(); 
+			for (std::vector<QuadNode*>::iterator it = nodeArr.begin();
 				it != nodeArr.end(); it++)
 			{
 				if (*it)
@@ -419,31 +413,13 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 			}
 
 		}
-
-
-		/*
-			r = distance between particles
-			d = length of quadrant 
-			if d/r <= theta 
-				its okay to use this 
-				subdivided = false
-				do 
-			else
-				subdivided = true
-				make vector*
-				for each quadrant with a point int it
-				vector* = calctreeforce
-				force.x += vector.x
-				same for y
-				}
-		*/
 	}
 	return force2;
 }
 
 
 //new particle acting on this 
-Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
+Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
 {
 	Vector2D force3;
 	double x1 = _particle1.xy->x;
@@ -453,7 +429,7 @@ Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
 	double mass1 = _particle1.mState;
 	double mass2 = _particle2.mState;
 
-	double r = sqrt( (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) );
+	double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
 
 	if (x1 == x2 && y1 == y2)
 	{
@@ -461,7 +437,7 @@ Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
 	}
 	else if (r > 0)
 	{
-		double k = G_CONST *( ( mass1 * mass2 )/ r*r);
+		double k = G_CONST *((mass1 * mass2) / r*r);
 		force3.x += k*(x2 - x1);
 		force3.y += k*(y2 - y1);
 
@@ -469,7 +445,7 @@ Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
 	else
 	{
 		//not possible if two particles are too close together
-		force3.x = force3.y = 0; 
+		force3.x = force3.y = 0;
 	}
 	return force3;
 }

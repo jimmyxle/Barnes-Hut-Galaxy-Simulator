@@ -121,6 +121,8 @@ int main()
 {
 	std::cout << "Start" << std::endl;
 	//-----------------------
+	const int NUMBER_PARTICLES = 25;
+	const double TIME = 1 / 30;
 
 
 
@@ -133,23 +135,16 @@ int main()
 	while (repeat)
 	{
 
-		const int NUMBER_PARTICLES = 25;
 
 		ParticleData particle;
-		std::vector<ParticleData*> allParticles =
-			particle.generateParticles(NUMBER_PARTICLES, 1);
-		allParticles.reserve(NUMBER_PARTICLES);
+		std::vector<ParticleData*> allParticles;
+		// allParticles.reserve(NUMBER_PARTICLES);
+		particle.generateParticles(NUMBER_PARTICLES, 1);
 
+		Vector2D* max =  new Vector2D(1, -1);
+		Vector2D* min =  new Vector2D(-1, 1);
 
-
-
-
-		Vector2D* max = new Vector2D(1, -1);
-		Vector2D* min = new Vector2D(-1, 1);
-
-		QuadNode* root = new QuadNode(*(min), *(max), QuadNode::NONE, nullptr);
-
-
+		QuadNode* root = new QuadNode( *min, *max, QuadNode::NONE, nullptr);
 
 		for (int i = 0; i < NUMBER_PARTICLES; i++)
 		{
@@ -157,8 +152,7 @@ int main()
 			root->insert(*allParticles[i]);
 		}
 
-
-
+		//display everything for this frame
 		display(allParticles, root);
 
 		/*
@@ -166,6 +160,19 @@ int main()
 		*/
 		std::cout << "center of mass calculations\n" << std::endl;
 		root->computeMassDistribution();
+
+		Vector2D target;
+		for (std::vector<ParticleData*>::iterator it = allParticles.begin(); it != allParticles.end(); it++)
+		{
+			(*it)->printParticle();
+			target = root->calcForce (*(*it) );
+			(*it)->calcDistance( target , TIME);
+			std::cout << "target's force vector: ";
+			target.print();
+			(*it)->printParticle();
+
+		}
+
 
 
 
