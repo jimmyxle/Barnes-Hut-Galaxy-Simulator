@@ -2,7 +2,7 @@
 #include "ParticleData.h"
 #include <iostream>
 #include "Tree.h"
-
+#include <Windows.h>
 /*
 Note: displayQuadrant only shows one box so far, ill have to go through my tree 
 recusively to find the other quadrants
@@ -85,8 +85,9 @@ void displayQuadrant( QuadNode& quad)
 	glPopMatrix();
 }
 
-int display(std::vector<ParticleData*> allParticles, QuadNode* root)
+int display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME)
 {
+	Vector2D target;
 	GLFWwindow* window;
 	if (!glfwInit())
 	{
@@ -107,6 +108,52 @@ int display(std::vector<ParticleData*> allParticles, QuadNode* root)
 		displayParticles(allParticles);
 		displayQuadrant(*root);
 
+		for (std::vector<ParticleData*>::iterator it = allParticles.begin(); it != allParticles.end(); it++)
+		{
+			target = root->calcForce(*(*it));
+			(*it)->calcDistance(target, TIME);
+		}
+
+		Sleep(33);
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+
+	}
+	glfwTerminate();
+}
+
+int running_display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME)
+{
+	Vector2D target;
+
+	GLFWwindow* window;
+	if (!glfwInit())
+	{
+		std::cout << "Error Initializing GLFW" << std::endl;
+		return -1;
+	}
+	window = glfwCreateWindow(500, 500, "Barnes-Hut Tree", NULL, NULL);
+	if (!window)
+	{
+		std::cout << "Error creating window" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+	glfwMakeContextCurrent(window);
+
+	while (!glfwWindowShouldClose(window))
+	{
+		displayParticles(allParticles);
+
+		for (std::vector<ParticleData*>::iterator it = allParticles.begin(); it != allParticles.end(); it++)
+		{
+			target = root->calcForce(*(*it));
+			(*it)->calcDistance(target, TIME);
+		}
+
+		Sleep(33);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
@@ -121,9 +168,19 @@ int main()
 {
 	std::cout << "Start" << std::endl;
 	//-----------------------
-	const int NUMBER_PARTICLES = 25;
-	const double TIME = 1 / 30;
+	const int NUMBER_PARTICLES = 100;
+	const double TIME = 0.1;
 
+	//setup
+	ParticleData particle;
+	std::vector<ParticleData*> allParticles;
+	allParticles.reserve(NUMBER_PARTICLES);
+	allParticles = particle.generateParticles(NUMBER_PARTICLES, 1);
+
+	Vector2D* max = new Vector2D(1, -1, 0, 0);
+	Vector2D* min = new Vector2D(-1, 1, 0, 0);
+
+	QuadNode* root = new QuadNode(*min, *max, QuadNode::NONE, nullptr);
 
 
 
@@ -134,44 +191,26 @@ int main()
 
 	while (repeat)
 	{
-
-
-		ParticleData particle;
-		std::vector<ParticleData*> allParticles;
-		// allParticles.reserve(NUMBER_PARTICLES);
-		particle.generateParticles(NUMBER_PARTICLES, 1);
-
-		Vector2D* max =  new Vector2D(1, -1);
-		Vector2D* min =  new Vector2D(-1, 1);
-
-		QuadNode* root = new QuadNode( *min, *max, QuadNode::NONE, nullptr);
-
+		/*
+		
 		for (int i = 0; i < NUMBER_PARTICLES; i++)
 		{
 			std::cout << "particle#: " << i << "\n";
 			root->insert(*allParticles[i]);
 		}
-
-		//display everything for this frame
-		display(allParticles, root);
-
-		/*
-			center of mass calculations
 		*/
-		std::cout << "center of mass calculations\n" << std::endl;
+		//running_display(allParticles, root, TIME);
+
+		//std::cout << "center of mass calculations\n" << std::endl;
+		root->buildTree(allParticles, NUMBER_PARTICLES);
 		root->computeMassDistribution();
 
-		Vector2D target;
-		for (std::vector<ParticleData*>::iterator it = allParticles.begin(); it != allParticles.end(); it++)
-		{
-			(*it)->printParticle();
-			target = root->calcForce (*(*it) );
-			(*it)->calcDistance( target , TIME);
-			std::cout << "target's force vector: ";
-			target.print();
-			(*it)->printParticle();
+		display(allParticles, root, TIME);
 
-		}
+
+		//reset all quadnodes
+
+
 
 
 

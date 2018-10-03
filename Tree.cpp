@@ -30,7 +30,7 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, Quad
 	particle = nullptr;
 
 	topLeft = min;
-	center = Vector2D( (min.x + (max.x-min.x)/2.0) , (min.y + (max.y-min.y)/2.0) );
+	center = Vector2D( (min.x + (max.x-min.x)/2.0) , (min.y + (max.y-min.y)/2.0),0,0 );
 	botRight = max;
 	
 	parent = _parent;
@@ -477,3 +477,20 @@ end
 
 */
 
+void QuadNode::buildTree(std::vector<ParticleData*> arr, int NUMBER_PARTICLES)
+{
+	if (parent != nullptr)
+	{
+		std::cout << "only the root can call this." << std::endl;
+
+		return;
+	}
+
+	this->reset(topLeft, botRight);
+
+	for (int i = 0; i < NUMBER_PARTICLES; i++)
+	{
+		std::cout << "particle#: " << i << "\n";
+		this->insert(*arr[i]);
+	}
+}
