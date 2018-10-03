@@ -16,16 +16,24 @@ ParticleData::ParticleData(double _x, double _y, double mstate)
 	mState = mstate;
 }
 
+ParticleData::ParticleData(double _x, double _y, double mstate, double _vx, double _vy)
+{
+	xy = new Vector2D(_x, _y, _vx, _vy);
+	mState = mstate;
+}
+
 void ParticleData::reset()
 {
 	xy->x = 0;
 	xy->y = 0;
+	xy->vx = 0;
+	xy->vy = 0;
 	mState = NULL;
 }
 
 bool ParticleData::isNull() const
 {
-	return ( (*xy).x == 0 && (*xy).y == 0) && mState; //what? Didn't know this worked this way
+	return ( (*xy).x == 0 && (*xy).y == 0) && mState && (xy->vx == 0 && xy->vy ==0); //what? Didn't know this worked this way
 }
 
 void ParticleData::printParticle()
@@ -35,7 +43,8 @@ void ParticleData::printParticle()
 		std::cerr << "nullptr" << std::endl;
 		return;
 	}
-	std::cout << "( " << (*xy).x << ", " << (*xy).y << "): "<< mState ;
+	xy->print();
+	std::cout <<" mass: "<< mState ;
 }
 
 std::vector<ParticleData*> ParticleData::generateParticles( int n, double factor )
@@ -45,23 +54,17 @@ std::vector<ParticleData*> ParticleData::generateParticles( int n, double factor
 	srand(time(NULL)); //seed? 
 	int max = n;
 
+	for (int i = 0; i < max; i++)
+	{
+		double x =	factor*((rand() % 20 - 10) / 10.0);
+		double y =	factor*((rand() % 20 - 10) / 10.0);
+		double vx = factor*((rand() % 20 - 10) / 10.0);
+		double vy = factor*((rand() % 20 - 10) / 10.0);
 
-	if(n == 2)
-	{
-		arr.push_back(new ParticleData(0.5, 0.5, 1.0));
-		arr.push_back(new ParticleData(-0.5, 0.5, 1.0));
-		
+		double m = rand() % 10;
+		arr.push_back(new ParticleData(x, y, m, vx, vy));
 	}
-	else
-	{
-		for (int i = 0; i < max; i++)
-		{
-			double x = factor* ((rand() % 20 - 10) / 10.0);
-			double y = factor*((rand() % 20 - 10) / 10.0);
-			double m = rand() % 10;
-			arr.push_back(new ParticleData(x, y, m));
-		}
-	}
+	
 
 
 	for (int i = 0; i < max; i++)
@@ -72,4 +75,29 @@ std::vector<ParticleData*> ParticleData::generateParticles( int n, double factor
 	}
 
 	return arr;
+}
+
+void ParticleData::calcDistance(Vector2D force, double time)
+{
+	//so i got the force. ill divide this by the mass and get the accel
+	double acc_x = force.x / mState;
+	double acc_y = force.y / mState;
+
+	//s =  vit + 1/2at^2
+	double vel_x = acc_x / time;
+
+	double vel_y = acc_y / time;
+
+
+	this->xy->vx += vel_x;
+	this->xy->vy += vel_y;
+
+	double dist_x = this->xy->vx*time + 0.5*(acc_x * time * time);
+	double dist_y = this->xy->vy*time + 0.5*(acc_y * time * time);
+
+	this->xy->x += dist_x;
+	this->xy->y += dist_y;
+
+
+
 }

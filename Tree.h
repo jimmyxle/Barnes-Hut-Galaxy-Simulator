@@ -28,7 +28,6 @@ public:
 	Vector2D calcForceTree( ParticleData& _particle);
 	Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2); //new particle acting on this
 
-
 	// variables
 	std::vector<QuadNode*> nodeArr; //4 children, 0 NE, 1 NW, 2SE, 3 SW
 	Vector2D getVector(int n);
