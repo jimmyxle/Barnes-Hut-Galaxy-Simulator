@@ -29,7 +29,7 @@ void ParticleData::reset()
 	xy->y = 0;
 	xy->vx = 0;
 	xy->vy = 0;
-	mState = NULL;
+	mState = 0;
 }
 
 bool ParticleData::isNull() const

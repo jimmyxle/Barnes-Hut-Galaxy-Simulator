@@ -85,7 +85,7 @@ void displayQuadrant( QuadNode& quad)
 	glPopMatrix();
 }
 
-int display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME)
+int display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME, int NUMBER_PARTICLES)
 {
 	Vector2D target;
 	GLFWwindow* window;
@@ -105,11 +105,18 @@ int display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME
 
 	while (!glfwWindowShouldClose(window))
 	{
+		root->buildTree(allParticles, NUMBER_PARTICLES);
+
+		root->computeMassDistribution();
+
 		displayParticles(allParticles);
+
 		displayQuadrant(*root);
+
 
 		for (std::vector<ParticleData*>::iterator it = allParticles.begin(); it != allParticles.end(); it++)
 		{
+
 			target = root->calcForce(*(*it));
 			(*it)->calcDistance(target, TIME);
 		}
@@ -123,7 +130,7 @@ int display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME
 	glfwTerminate();
 }
 
-int running_display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME)
+int running_display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME, int NUMBER_PARTICLES)
 {
 	Vector2D target;
 
@@ -144,6 +151,9 @@ int running_display(std::vector<ParticleData*> allParticles, QuadNode* root, dou
 
 	while (!glfwWindowShouldClose(window))
 	{
+		root->buildTree(allParticles, NUMBER_PARTICLES);
+		root->computeMassDistribution();
+
 		displayParticles(allParticles);
 
 		for (std::vector<ParticleData*>::iterator it = allParticles.begin(); it != allParticles.end(); it++)
@@ -168,7 +178,7 @@ int main()
 {
 	std::cout << "Start" << std::endl;
 	//-----------------------
-	const int NUMBER_PARTICLES = 100;
+	const int NUMBER_PARTICLES = 5;
 	const double TIME = 0.1;
 
 	//setup
@@ -202,11 +212,11 @@ int main()
 		//running_display(allParticles, root, TIME);
 
 		//std::cout << "center of mass calculations\n" << std::endl;
-		root->buildTree(allParticles, NUMBER_PARTICLES);
-		root->computeMassDistribution();
 
-		display(allParticles, root, TIME);
 
+		display(allParticles, root, TIME, NUMBER_PARTICLES);
+
+	
 
 		//reset all quadnodes
 

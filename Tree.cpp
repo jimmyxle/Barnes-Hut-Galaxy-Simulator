@@ -7,7 +7,7 @@
 static/global variables go here 
 */
 
-const double _THETA = 0.9; //why 0.9 ?
+const double _THETA = 0.9; //close to 1.0
 const double G_CONST = 6.674 * pow(10.0, -11.0);
 
 
@@ -32,7 +32,10 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, Quad
 	topLeft = min;
 	center = Vector2D( (min.x + (max.x-min.x)/2.0) , (min.y + (max.y-min.y)/2.0),0,0 );
 	botRight = max;
-	
+
+	COM = Vector2D();
+	totalMass = 0;
+
 	parent = _parent;
 	nodeArr.reserve(4);
 
@@ -40,14 +43,21 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, Quad
 	numParticles = 0;
 	numSubdivisions = 0;
 	QUADRANT = quad;
+
 }
 QuadNode::~QuadNode()
 {
-	for (int i = 0; i < 4; i++)
+	if (nodeArr.size() != 0)
 	{
-		auto temp = nodeArr[i];
-		delete (&temp) ;
+		for (int i = 0; i < 4; i++)
+		{
+
+			delete  nodeArr[i];
+			nodeArr[i] = nullptr;
+			
+		}
 	}
+
 }
 bool QuadNode::contains(ParticleData &_particle)
 {
@@ -56,11 +66,8 @@ bool QuadNode::contains(ParticleData &_particle)
 
 
 
-
-
-
 	if (p_x >= this->topLeft.x &&
-		p_x <= this->botRight.x &&
+		p_x <= this->botRight.x && 
 		p_y >= this->botRight.y &&
 		p_y <= this->topLeft.y)
 	{
@@ -81,7 +88,7 @@ bool QuadNode::contains(ParticleData &_particle)
 }
 
 
-
+//here's the problem HERE ERROR
 void QuadNode::insert(ParticleData &newParticle)
 {
 	//check if it contains this 
@@ -477,7 +484,7 @@ end
 
 */
 
-void QuadNode::buildTree(std::vector<ParticleData*> arr, int NUMBER_PARTICLES)
+void QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
 {
 	if (parent != nullptr)
 	{
@@ -493,4 +500,41 @@ void QuadNode::buildTree(std::vector<ParticleData*> arr, int NUMBER_PARTICLES)
 		std::cout << "particle#: " << i << "\n";
 		this->insert(*arr[i]);
 	}
+}
+
+void QuadNode::reset(const Vector2D &min, const Vector2D &max )
+{
+	if (parent != nullptr)
+	{
+		std::cout << "not root" << std::endl;
+		return;
+	}
+
+	if (nodeArr.size() != 0 )
+	{
+
+		for (int i = 0; i < 4; i++)
+		{
+			if (nodeArr[i])
+			{
+				delete *(&nodeArr[i]);
+				nodeArr[i] = nullptr;
+			}
+
+		}
+
+		std::cout << "heyyo";
+		std::cout << min.x;
+
+		topLeft = min;
+		botRight = max;
+
+		center = Vector2D((min.x + (max.x - min.x) / 2.0), (min.y + (max.y - min.y) / 2.0), 0, 0);
+		numParticles = 0;
+		totalMass = 0;
+		COM.x = 0;
+		COM.y = 0;
+	}
+
+
 }

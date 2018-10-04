@@ -17,7 +17,7 @@ public:
 
 	void reset(const Vector2D &min, const Vector2D &max);
 
-	void buildTree(std::vector<ParticleData*> arr, int NUMBER_PARTICLES);
+	void buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES);
 	void insert( ParticleData &newParticle);
 
 	void subdivide();
