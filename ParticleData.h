@@ -25,11 +25,12 @@ public:
 	void reset();
 	bool isNull() const;
 	void printParticle();
-	std::vector<ParticleData*> generateParticles(int n, double factor);
+	std::vector<ParticleData*> generateParticles(double a, double b,int n, double R);
 	void calcDistance(Vector2D force, double time);
+	ParticleData* renegadeHandler();
+
+
 
 	Vector2D* xy;
-
-
 	double mState;
 };

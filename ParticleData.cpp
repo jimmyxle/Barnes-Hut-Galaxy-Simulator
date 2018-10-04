@@ -1,6 +1,7 @@
 #include "ParticleData.h"
 #include <cassert>
 
+#define PI 3.1415926535897;
 
 
 ParticleData::ParticleData()
@@ -48,22 +49,43 @@ void ParticleData::printParticle()
 	std::cout <<" mass: "<< mState ;
 }
 
-std::vector<ParticleData*> ParticleData::generateParticles( int n, double factor )
+std::vector<ParticleData*> ParticleData::generateParticles(double a, double b, int n, double R )
 {
 	std::vector<ParticleData*> arr;
 	arr.reserve(n);
 	srand(time(NULL)); //seed? 
 	int max = n;
 
+	/*
+	r = R * sqrt(random())
+	theta = random() * 2 * PI
+
+	x = r * cos(theta)
+	y = r * sin(theta)
+	*/
+
+
 	for (int i = 0; i < max; i++)
 	{
-
+		
+		double r = R*sqrt( rand() / (double)RAND_MAX );
+		double angle = (rand() / (double)RAND_MAX) * 2 * PI;
+		/*
 		double x =	factor*((rand() % 20 - 10) / 10.0);
 		double y =	factor*((rand() % 20 - 10) / 10.0);
-		double vx = factor*((rand() % 20 - 10) / 10.0);
-		double vy = factor*((rand() % 20 - 10) / 10.0);
+		*/
+		double x = a + r*cos(angle) ;
+		double y = b + r*sin(angle)  ;
 
-		double m = rand() % 10 + 0.5;
+		//double vx =  r*cos(angle);
+		double vx = 0;
+
+		//double vy =   r*sin(angle);
+		double vy = 0;
+		//while (vy == 0.0)
+		//	vy = ((rand() % 4 - 2) / 10.0);
+
+		double m = rand() % 10 + 0.1;
 		arr.push_back(new ParticleData(x, y, m, vx, vy));
 	}
 	
@@ -87,16 +109,16 @@ void ParticleData::calcDistance(Vector2D force, double time)
 	double acc_y = force.y / mState;
 
 	//s =  vit + 1/2at^2
-
-	double vel_x = acc_x / time;
-	double vel_y = acc_y / time;
-
 	double temp_vx = xy->vx;
 	double temp_vy = xy->vy;
+	/*
+	double vel_x = acc_x * time + temp_vx;
+	double vel_y = acc_y * time + temp_vy;
+	*/
 
+	double vel_x = acc_x * time + temp_vx;
+	double vel_y = acc_y * time + temp_vy;
 
-	
-	
 	double dist_x = temp_vx*time + 0.5*(acc_x * time * time);
 	double dist_y = temp_vy*time + 0.5*(acc_y * time * time);
 	
@@ -118,5 +140,13 @@ void ParticleData::calcDistance(Vector2D force, double time)
 		xy->y = 1;
 
 
+
+}
+
+ParticleData* ParticleData::renegadeHandler()
+{
+	xy->x += 0.5;
+	xy->y += 0.5;
+	return this;
 
 }

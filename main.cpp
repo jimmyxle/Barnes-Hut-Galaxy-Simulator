@@ -131,7 +131,7 @@ int display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME
 			(*it)->calcDistance(target, TIME);
 		}
 
-		Sleep(33);
+		Sleep(33);//should be 33
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -188,14 +188,14 @@ int main()
 {
 	std::cout << "Start" << std::endl;
 	//-----------------------
-	const int NUMBER_PARTICLES = 5;
+	const int NUMBER_PARTICLES = 25;
 	const double TIME = 0.1;
 
 	//setup
 	ParticleData particle;
 	std::vector<ParticleData*> allParticles;
 	allParticles.reserve(NUMBER_PARTICLES);
-	allParticles = particle.generateParticles(NUMBER_PARTICLES, 1);
+	allParticles = particle.generateParticles(-0.5, -0.5, NUMBER_PARTICLES, 0.1);
 
 	Vector2D* max = new Vector2D(1, -1, 0, 0);
 	Vector2D* min = new Vector2D(-1, 1, 0, 0);
@@ -223,8 +223,8 @@ int main()
 
 		//std::cout << "center of mass calculations\n" << std::endl;
 
-
-		display(allParticles, root, TIME, NUMBER_PARTICLES);
+		running_display(allParticles, root, TIME, NUMBER_PARTICLES);
+		//display(allParticles, root, TIME, NUMBER_PARTICLES);
 
 	
 

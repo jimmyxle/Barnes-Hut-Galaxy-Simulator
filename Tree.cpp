@@ -147,6 +147,9 @@ void QuadNode::insert(ParticleData &newParticle)
 		{
 
 			std::cerr << "a: Error not contained within this quadrant." << std::endl;
+			newParticle.printParticle();
+			std::cout << "\n";
+			//this->parent->insert(*(newParticle).renegadeHandler());
 		}
 	}
 	else if (this->numParticles == 1)
@@ -159,15 +162,25 @@ void QuadNode::insert(ParticleData &newParticle)
 	//		std::cout << "split" << std::endl;
 			this->subdivide();
 		}
+		
+		
 		if ((particle)->xy->x == newParticle.xy->x &&
 			this->particle->xy->y == newParticle.xy->y)
 		{
-	//		std::cout << "same particle found " << std::endl;
-			newParticle.xy->x += 0.05;
-			newParticle.xy->y += 0.05;
+		//handle renegades ?			
+			if(newParticle.xy->x <=0)
+				newParticle.xy->x += 0.01;
+			else
+				newParticle.xy->x -= 0.01;
 
+
+			if (newParticle.xy->y <= 0)
+				newParticle.xy->y += 0.01;
+			else
+				newParticle.xy->y -= 0.01;
 
 		}
+		
 		//check if exactly the same
 			//do soemthing
 		
@@ -215,6 +228,9 @@ void QuadNode::insert(ParticleData &newParticle)
 		{
 
 			std::cerr << "b: Error not contained within this quadrant." << std::endl;
+			//this->parent->insert( *(newParticle).renegadeHandler() );
+			newParticle.printParticle();
+			std::cout << "\n";
 
 		}
 		//std::cout << "Handle new particle =" << (&newParticle)->xy->x << std::endl;
@@ -253,6 +269,9 @@ void QuadNode::insert(ParticleData &newParticle)
 		else
 		{
 			std::cerr << "c: Error not contained within this quadrant." << std::endl;
+	//		parent->insert(*(newParticle).renegadeHandler());
+			newParticle.printParticle();
+			std::cout << "\n";
 
 		}
 	}
@@ -267,7 +286,6 @@ void QuadNode::insert(ParticleData &newParticle)
 	}
 	numParticles++;
 	//std::cout << "insert on new_particle" << (&newParticle)->xy->x << std::endl;
-
 
 
 }
