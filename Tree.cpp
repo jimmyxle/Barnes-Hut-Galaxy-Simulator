@@ -44,6 +44,7 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, Quad
 	numSubdivisions = 0;
 	QUADRANT = quad;
 
+
 }
 QuadNode::~QuadNode()
 {
@@ -53,11 +54,13 @@ QuadNode::~QuadNode()
 		{
 
 			delete  nodeArr[i];
-			nodeArr[i] = nullptr;
+			//nodeArr[i] = nullptr;
 			
 		}
 	}
-
+	nodeArr.clear();
+	particle = nullptr;
+	parent = nullptr;
 }
 bool QuadNode::contains(ParticleData &_particle)
 {
@@ -112,6 +115,8 @@ void QuadNode::insert(ParticleData &newParticle)
 		//recurse on quadrant
 
 		//check if subdivided already
+	//	std::cout <<"alpha: "<< nodeArr.size()<<"\n";
+
 		if (nodeArr.size() == 0 && divided == false)
 		{
 			this->subdivide();
@@ -146,11 +151,12 @@ void QuadNode::insert(ParticleData &newParticle)
 	}
 	else if (this->numParticles == 1)
 	{
-		//std::cout << " == 1 " << std::endl;
+	//	std::cout << "beta: " << nodeArr.size() << "\n";
+
 
 		if (this->nodeArr.size() == 0 && this->divided == false)
 		{
-		//	std::cout << "split" << std::endl;
+	//		std::cout << "split" << std::endl;
 			this->subdivide();
 		}
 		if ((particle)->xy->x == newParticle.xy->x &&
@@ -172,6 +178,7 @@ void QuadNode::insert(ParticleData &newParticle)
 
 	//	particle->printParticle(); 
 	//	std::cout << "\n";
+
 
 
 		if (this->nodeArr[0]->contains( *particle ))
@@ -251,6 +258,8 @@ void QuadNode::insert(ParticleData &newParticle)
 	}
 	else if (this->numParticles == 0)
 	{
+	//	std::cout << "gamma: " << nodeArr.size() << "\n";
+
 		//std::cout << " == 0 " << std::endl;
 //		newParticle.printParticle();
 //		std::cout << "\n";
@@ -497,7 +506,7 @@ void QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
 
 	for (int i = 0; i < NUMBER_PARTICLES; i++)
 	{
-		std::cout << "particle#: " << i << "\n";
+		//std::cout << "particle#: " << i << "\n";
 		this->insert(*arr[i]);
 	}
 }
@@ -515,16 +524,13 @@ void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 
 		for (int i = 0; i < 4; i++)
 		{
-			if (nodeArr[i])
-			{
-				delete *(&nodeArr[i]);
-				nodeArr[i] = nullptr;
-			}
+
+			delete nodeArr[i];
+			nodeArr[i] = nullptr;
 
 		}
+		nodeArr.clear();
 
-		std::cout << "heyyo";
-		std::cout << min.x;
 
 		topLeft = min;
 		botRight = max;
@@ -534,6 +540,7 @@ void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 		totalMass = 0;
 		COM.x = 0;
 		COM.y = 0;
+		divided = false;
 	}
 
 

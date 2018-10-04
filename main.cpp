@@ -105,12 +105,22 @@ int display(std::vector<ParticleData*> allParticles, QuadNode* root, double TIME
 
 	while (!glfwWindowShouldClose(window))
 	{
+		std::cout << "New cycle" << std::endl;		
+		
+		
+		for (int i = 0; i < NUMBER_PARTICLES; i++)
+		{
+			std::cout << i << ". ";
+			(*allParticles[i]).printParticle();
+			std::cout << std::endl;
+		}
 		root->buildTree(allParticles, NUMBER_PARTICLES);
+
+
 
 		root->computeMassDistribution();
 
 		displayParticles(allParticles);
-
 		displayQuadrant(*root);
 
 

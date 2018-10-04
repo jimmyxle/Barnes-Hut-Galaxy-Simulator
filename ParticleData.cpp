@@ -68,13 +68,14 @@ std::vector<ParticleData*> ParticleData::generateParticles( int n, double factor
 	}
 	
 
-
+	/*
 	for (int i = 0; i < max; i++)
 	{
 		std::cout << i <<". ";
 		(*arr[i]).printParticle();
 		std::cout << std::endl;
 	}
+	*/
 
 	return arr;
 }
