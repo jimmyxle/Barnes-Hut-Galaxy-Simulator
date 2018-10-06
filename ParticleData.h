@@ -27,7 +27,6 @@ public:
 	void printParticle();
 	std::vector<ParticleData*> generateParticles(double a, double b,int n, double R);
 	void calcDistance(Vector2D force, double time);
-	ParticleData* renegadeHandler();
 
 
 

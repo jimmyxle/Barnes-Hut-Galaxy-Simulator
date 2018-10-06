@@ -2,13 +2,16 @@
 #include <cstdlib>
 #include <cmath>
 #include <stdexcept>
+#include <sstream>
+#include "Galaxy.h"
 
 /*
 static/global variables go here 
 */
 
-const double _THETA = 0.9; //close to 1.0
+const double _THETA = 0.9; //close to 1.0, determines # calcs
 const double G_CONST = 6.674 * pow(10.0, -11.0);
+std::vector<ParticleData*> Galaxy::renegades;
 
 
 QuadNode::QuadNode()
@@ -91,19 +94,15 @@ bool QuadNode::contains(ParticleData &_particle)
 }
 
 
-//here's the problem HERE ERROR
 void QuadNode::insert(ParticleData &newParticle)
 {
-	//check if it contains this 
-	/*
-	std::cout << "insert begins on new_particle"<<(&newParticle)->xy->x << std::endl;
-	std::cout << "numParticles: " << numParticles << std::endl;
-	
+
 	if (!this->contains( newParticle ))
 	{
-		std::cout << "doesn't contain this particle" << std::endl;
-		return; //doesn't contain this point
-	}*/
+		std::stringstream ss;
+		ss << "doesn't contain this particle";
+		throw std::runtime_error(ss.str());
+	}
 	
 
 
@@ -146,9 +145,11 @@ void QuadNode::insert(ParticleData &newParticle)
 		else
 		{
 
-			std::cerr << "a: Error not contained within this quadrant." << std::endl;
+			std::cerr << "a: Particle added to renegades.\n";
 			newParticle.printParticle();
 			std::cout << "\n";
+			Galaxy::renegades.push_back(&(newParticle));
+				//pushback(newParticle);
 			//this->parent->insert(*(newParticle).renegadeHandler());
 		}
 	}
@@ -181,16 +182,6 @@ void QuadNode::insert(ParticleData &newParticle)
 
 		}
 		
-		//check if exactly the same
-			//do soemthing
-		
-		//std::cout << "Handle old particle ::" << (particle)->xy->x << std::endl;
-		//find quadrant of original
-			//insert on that
-			//remove pointer
-
-	//	particle->printParticle(); 
-	//	std::cout << "\n";
 
 
 
@@ -227,10 +218,12 @@ void QuadNode::insert(ParticleData &newParticle)
 		else
 		{
 
-			std::cerr << "b: Error not contained within this quadrant." << std::endl;
-			//this->parent->insert( *(newParticle).renegadeHandler() );
+
+			std::cerr << "b: Particle added to renegades.\n";
 			newParticle.printParticle();
 			std::cout << "\n";
+			Galaxy::renegades.push_back(&(newParticle));
+
 
 		}
 		//std::cout << "Handle new particle =" << (&newParticle)->xy->x << std::endl;
@@ -268,10 +261,12 @@ void QuadNode::insert(ParticleData &newParticle)
 		}
 		else
 		{
-			std::cerr << "c: Error not contained within this quadrant." << std::endl;
-	//		parent->insert(*(newParticle).renegadeHandler());
+
+			std::cerr << "c: Particle added to renegades.\n";
 			newParticle.printParticle();
 			std::cout << "\n";
+			Galaxy::renegades.push_back(&(newParticle));
+
 
 		}
 	}
@@ -366,12 +361,18 @@ void QuadNode::computeMassDistribution()
 	// std::cout << "num of particles: " << numParticles << std::endl;
 	if (numParticles == 1)
 	{
-		COM = *(particle->xy);
+		COM.x = particle->xy->x;
+		COM.y = particle->xy->y;
+
 		totalMass = particle->mState;
 		// std::cout << "COM is (" << COM.x << "," << COM.y << ")" << std::endl;
 	}
 	else
 	{
+		totalMass = 0;
+		COM.x = 0;
+		COM.y = 0;
+
 		for (std::vector<QuadNode*>::iterator it = nodeArr.begin(); it != nodeArr.end(); 
 			it++)
 		{
@@ -379,9 +380,11 @@ void QuadNode::computeMassDistribution()
 			{
 
 				(*it)->computeMassDistribution();
-				totalMass += (*it)->totalMass;
-				COM.x += (*it)->totalMass*(*it)->COM.x;
-				COM.y += (*it)->totalMass*(*it)->COM.y;
+
+				this->totalMass += (*it)->totalMass;
+
+				this->COM.x += (*it)->totalMass*(*it)->COM.x;
+				this->COM.y += (*it)->totalMass*(*it)->COM.y;
 			}
 		}
 		COM.x /= totalMass;
@@ -395,13 +398,23 @@ Vector2D QuadNode::calcForce(ParticleData& _particle)
 	Vector2D force1 = this->calcForceTree(_particle);
 
 	//include osmething for renegade stuff
+
+	if (int s = Galaxy::renegades.size())
+	{
+		for (int i = 0; i<s; ++i)
+		{
+			Vector2D force4 = calcAcceleration(_particle, *Galaxy::renegades[i] );
+			force1.x += force4.x;
+			force1.y += force4.y;
+		}
+	}
 	 return force1;
 }
 
 
 Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 {
-	Vector2D force2 = Vector2D();
+	Vector2D force2;
 
 	if (numParticles == 1)
 	{
@@ -419,14 +432,18 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 		double mass2 = _particle.mState;
 
 		double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
-		double d = abs(topLeft.x) + abs(botRight.x);
+		double d = botRight.x - topLeft.x;
 
 		double theta = d / r;
 		if (theta <= _THETA)
 		{
-			double k = G_CONST*(mass1 * mass2) / (r*r);
+			double k = G_CONST * ( (mass1) / (r*r*r));
+
+			force2.x += k*(x1 - x2);
+			force2.y += k*(y1 - y2);
+/*			double k = G_CONST * (mass1 / (r * r * r));
 			force2.x += k* (x2 - x1);
-			force2.y += k* (y2 - y1);
+			force2.y += k* (y2 - y1);*/
 
 			//add number of calc for debug
 		}
@@ -456,12 +473,12 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
 {
 	Vector2D force3;
-	double x1 = _particle1.xy->x;
-	double y1 = _particle1.xy->y;
-	double x2 = _particle2.xy->x;
-	double y2 = _particle2.xy->y;
-	double mass1 = _particle1.mState;
-	double mass2 = _particle2.mState;
+	const double &x1 = _particle1.xy->x;
+	const double &y1 = _particle1.xy->y;
+	const double &x2 = _particle2.xy->x;
+	const double &y2 = _particle2.xy->y;
+	const double &mass1 = _particle1.mState;
+	const double &mass2 = _particle2.mState;
 
 	double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
 
@@ -471,9 +488,10 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 	}
 	else if (r > 0)
 	{
-		double k = G_CONST *((mass1 * mass2) / r*r);
-		force3.x += k*(x2 - x1);
-		force3.y += k*(y2 - y1);
+		double k = G_CONST * ((mass2) / (r*r*r));
+
+		force3.x += k * (x2 - x1);
+		force3.y += k * (y2 - y1);
 
 	}
 	else

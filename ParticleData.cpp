@@ -53,100 +53,92 @@ std::vector<ParticleData*> ParticleData::generateParticles(double a, double b, i
 {
 	std::vector<ParticleData*> arr;
 	arr.reserve(n);
-	srand(time(NULL)); //seed? 
+	srand(time(NULL)); 
+
 	int max = n;
-
-	/*
-	r = R * sqrt(random())
-	theta = random() * 2 * PI
-
-	x = r * cos(theta)
-	y = r * sin(theta)
-	*/
-
+	double factor = 0.0; //coefficient for initial velocities
 
 	for (int i = 0; i < max; i++)
 	{
-		
 		double r = R*sqrt( rand() / (double)RAND_MAX );
 		double angle = (rand() / (double)RAND_MAX) * 2 * PI;
 		/*
 		double x =	factor*((rand() % 20 - 10) / 10.0);
 		double y =	factor*((rand() % 20 - 10) / 10.0);
 		*/
-		double x = a + r*cos(angle) ;
-		double y = b + r*sin(angle)  ;
+		double x = a + r*cos(angle);
+		double y = b + r*sin(angle);
 
 		//double vx =  r*cos(angle);
-		double vx = 0;
+		double vx = factor + r * cos(angle);
 
 		//double vy =   r*sin(angle);
-		double vy = 0;
+		double vy = factor + r * sin(angle);
+		std::cout <<"("<<vx<<","<< vy << ")\n";
+
 		//while (vy == 0.0)
 		//	vy = ((rand() % 4 - 2) / 10.0);
 
 		double m = rand() % 10 + 0.1;
+		//double m = .0;
 		arr.push_back(new ParticleData(x, y, m, vx, vy));
 	}
-	
 
-	/*
-	for (int i = 0; i < max; i++)
-	{
-		std::cout << i <<". ";
-		(*arr[i]).printParticle();
-		std::cout << std::endl;
-	}
-	*/
 
 	return arr;
 }
 
-void ParticleData::calcDistance(Vector2D force, double time)
+void ParticleData::calcDistance(Vector2D force, double TIME)
 {
+	//TIME *= 2;
+	TIME = 200;
 	//so i got the force. ill divide this by the mass and get the accel
 	double acc_x = force.x / mState;
 	double acc_y = force.y / mState;
+	//std::cout<<"acc_x:" << acc_x << "\n";
+	//velocity to be added
+	double vel_x = acc_x * TIME ;
+	double vel_y = acc_y * TIME ;
 
-	//s =  vit + 1/2at^2
-	double temp_vx = xy->vx;
-	double temp_vy = xy->vy;
-	/*
-	double vel_x = acc_x * time + temp_vx;
-	double vel_y = acc_y * time + temp_vy;
-	*/
-
-	double vel_x = acc_x * time + temp_vx;
-	double vel_y = acc_y * time + temp_vy;
-
-	double dist_x = temp_vx*time + 0.5*(acc_x * time * time);
-	double dist_y = temp_vy*time + 0.5*(acc_y * time * time);
+	//distance to be added
+	double dist_x = vel_x * TIME;
+	double dist_y = vel_y * TIME;
 	
-	//change velocities
 	this->xy->vx += vel_x;
 	this->xy->vy += vel_y;
 
-	//change x/y position
+	//std::cout << "BEFORE: (" << xy->vx << "," << xy->vy << ")\n";
 
+	//change velocities
 	this->xy->x += dist_x;
-	if (xy->x > 1)
-		xy->x = -1;
-	if (xy->x < -1)
-		xy->x = 1;
-	this->xy->y += dist_y;
-	if (xy->y > 1)
-		xy->y = -1;
-	if (xy->y < -1)
-		xy->y = 1;
+	this->xy->y += dist_y ;
+	//std::cout << "AFTER(" << xy->vx << "," << xy->vy << ")\n";
+	
 
+	//change x/y position
+	if (xy->x >=0.99)
+	{
+		xy->x = -0.95;
+	//	xy->vx *= -0.5;
+	}
+	if (xy->x <= -0.99)
+	{
+		xy->x = 0.95;
+		//xy->vx *= -0.5;
+	}
+		
+	if (xy->y >= 0.99)
+	{
+		xy->y = -0.95;
+		//xy->vy *= -0.5;
+	}
+	if (xy->y <= -0.99)
+	{
+		xy->y = 0.95;
+		//xy->vy *= -0.5;
+
+	}
 
 
 }
 
-ParticleData* ParticleData::renegadeHandler()
-{
-	xy->x += 0.5;
-	xy->y += 0.5;
-	return this;
-
-}
