@@ -4,6 +4,7 @@ Galaxy::Galaxy()
 	NUMBER_PARTICLES = 500;
 	TIME = 10; //to find initial velocities + distance
 
+	//data parallel
 	allParticles.reserve(NUMBER_PARTICLES);
 	allParticles = particle.generateParticles(0, 0, NUMBER_PARTICLES, 0.5);
 	//x , y , num, radius

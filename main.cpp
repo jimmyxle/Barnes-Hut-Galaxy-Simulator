@@ -9,6 +9,8 @@ int main()
 	//-----------------------
 
 
+	//Galaxy* g_test = new Galaxy();
+
 	Galaxy* g1 = new Galaxy();
 
 
@@ -21,7 +23,7 @@ int main()
 	{
 
 
-		g1->running_display();
+		//g1->running_display();
 
 
 

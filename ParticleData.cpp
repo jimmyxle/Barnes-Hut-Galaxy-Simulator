@@ -1,7 +1,10 @@
 #include "ParticleData.h"
 #include <cassert>
+#include <thread>
+#include <mutex>
 
 #define PI 3.1415926535897;
+std::mutex _mu;
 
 
 ParticleData::ParticleData()
@@ -49,39 +52,62 @@ void ParticleData::printParticle()
 	std::cout <<" mass: "<< mState ;
 }
 
+void ParticleData::createParticle(double a, double b, double radius, 
+	int start, int end, std::vector<ParticleData*> &arr)
+{
+	for (int i = start; i < end; i++)
+	{
+		double r = radius * sqrt(rand() / (double)RAND_MAX);
+		double angle = (rand() / (double)RAND_MAX) * 2 * PI;
+
+		double x = a + r * cos(angle);
+		double y = b + r * sin(angle);
+
+		double vx = r * cos(angle);
+
+		double vy = r * sin(angle);
+
+
+		double m = rand() % 10 + 0.1;
+		std::lock_guard<std::mutex> lock(_mu);
+		arr.push_back(new ParticleData(x, y, m, vx, vy));
+		
+	}
+
+}
 std::vector<ParticleData*> ParticleData::generateParticles(double a, double b, int n, double R )
 {
 	std::vector<ParticleData*> arr;
 	arr.reserve(n);
 	srand(time(NULL)); 
 
-	int max = n;
-	double factor = 0.0; //coefficient for initial velocities
+	int max = std::move(n);
 
-	for (int i = 0; i < max; i++)
+	//control thread
+	const int nThreads = 4;
+	std::thread t_arr[nThreads];
+
+	for (int i = 0; i < nThreads; i++)
 	{
-		double r = R*sqrt( rand() / (double)RAND_MAX );
-		double angle = (rand() / (double)RAND_MAX) * 2 * PI;
-		/*
-		double x =	factor*((rand() % 20 - 10) / 10.0);
-		double y =	factor*((rand() % 20 - 10) / 10.0);
-		*/
-		double x = a + r*cos(angle);
-		double y = b + r*sin(angle);
+		int start = i * max / nThreads;
+		int end = (i + 1)*max / nThreads;
+		if (i == nThreads - 1)
+			end = max;
+		t_arr[i] = std::thread( &ParticleData::createParticle, this , std::ref(a), std::ref(b), std::ref(R), std::ref(start), std::ref(end), std::ref(arr));
+	}
+	for (int i = 0; i < nThreads; i++)
+	{
+		t_arr[i].join();
+	}
 
-		//double vx =  r*cos(angle);
-		double vx = factor + r * cos(angle);
-
-		//double vy =   r*sin(angle);
-		double vy = factor + r * sin(angle);
-		std::cout <<"("<<vx<<","<< vy << ")\n";
-
-		//while (vy == 0.0)
-		//	vy = ((rand() % 4 - 2) / 10.0);
-
-		double m = rand() % 10 + 0.1;
-		//double m = .0;
-		arr.push_back(new ParticleData(x, y, m, vx, vy));
+	if (arr.size() != 0)
+	{
+		for (int i = 0; i < max; i++)
+		{
+			std::cout << i<<"\t" ;
+			arr[i]->printParticle();
+			std::cout << "\n";
+		}
 	}
 
 

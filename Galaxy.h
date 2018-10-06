@@ -19,6 +19,7 @@ public:
 	int display();
 	int running_display();
 	static std::vector<ParticleData*> renegades;
+	ParticleData particle; //temp
 
 private:
 	std::vector<ParticleData*> allParticles;
@@ -27,7 +28,6 @@ private:
 	double y;
 	int NUMBER_PARTICLES;
 	double TIME;
-	ParticleData particle;
 	Vector2D* max;
 	Vector2D* min;
 };
