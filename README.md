@@ -1,3 +1,8 @@
+latest commit
+added two galaxy compatability
+added some initial multithreading
+sluggish at 300 threads
+
 fourth commit
 task completed:
 fixed opengl bug
