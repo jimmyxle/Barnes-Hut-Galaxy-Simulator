@@ -13,21 +13,27 @@ public:
 	Galaxy(double x, double y);
 	~Galaxy();
 	void displayParticles(std::vector<ParticleData*> arr);
+	void displayParticles(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2);
+
 	void recursiveBoxes(QuadNode& qt, double factor);
 	void displayQuadrant(QuadNode& quad);
+	void displayQuadrant(QuadNode& quad, QuadNode& second);
 
-	int display();
 	int running_display();
+	int two_running_display(Galaxy& second);
+
+	void add_galaxy(Galaxy& galaxy);
+
 	static std::vector<ParticleData*> renegades;
-	ParticleData particle; //temp
 
 private:
+	ParticleData particle; 
 	std::vector<ParticleData*> allParticles;
 	QuadNode * root;
 	double x;
 	double y;
 	int NUMBER_PARTICLES;
-	double TIME;
 	Vector2D* max;
 	Vector2D* min;
+
 };

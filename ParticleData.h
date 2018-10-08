@@ -17,7 +17,6 @@ struct ParticleData
 {
 public:
 	ParticleData();
-	//ParticleData(int _x, int _y, int _vx, int _vy, int mstate);
 	ParticleData(double _x, double _y, double mstate);
 	ParticleData(double _x, double _y, double mstate, double _vx, double _vy);
 
@@ -26,7 +25,8 @@ public:
 	bool isNull() const;
 	void printParticle();
 	std::vector<ParticleData*> generateParticles(double a, double b,int n, double R);
-	void calcDistance(Vector2D force, double time);
+	void calcDistance(Vector2D force);
+
 	void createParticle(double a, double b, double radius, int start, int end, std::vector<ParticleData*> &arr);
 
 

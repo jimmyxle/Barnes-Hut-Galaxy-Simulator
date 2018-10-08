@@ -9,9 +9,15 @@ int main()
 	//-----------------------
 
 
-	//Galaxy* g_test = new Galaxy();
 
-	Galaxy* g1 = new Galaxy();
+	Galaxy* g1 = new Galaxy(-0.5, -0.5);
+
+	
+	
+	
+	Galaxy* g2 = new Galaxy(0.5,0.5);
+	g1->add_galaxy(*g2);
+	
 
 
 
@@ -22,12 +28,14 @@ int main()
 	while (repeat)
 	{
 
-
 		//g1->running_display();
 
+		g1->two_running_display(*g2);
 
 
-		std::cout << "Enter '1' to repeat..." << std::endl;
+
+
+		std::cout << "Enter '1' to continue..." << std::endl;
 
 		std::cin >> a;
 		if (a != 1)

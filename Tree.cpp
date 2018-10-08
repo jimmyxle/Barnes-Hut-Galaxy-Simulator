@@ -4,14 +4,22 @@
 #include <stdexcept>
 #include <sstream>
 #include "Galaxy.h"
-
+#include <thread>
+#include <mutex>
 /*
 static/global variables go here 
 */
 
 const double _THETA = 0.9; //close to 1.0, determines # calcs
 const double G_CONST = 6.674 * pow(10.0, -11.0);
+const int nThreads = 300;
+
 std::vector<ParticleData*> Galaxy::renegades;
+std::mutex subdivideMutex;
+std::mutex renegadeMutex;
+std::mutex nullMutex;
+std::mutex increaseMutex;
+std::mutex calcForceMutex;
 
 
 QuadNode::QuadNode()
@@ -65,38 +73,40 @@ QuadNode::~QuadNode()
 	particle = nullptr;
 	parent = nullptr;
 }
+
+//this occasionally breaks here. I think its cuz some thread information is lost 
+//during a bad context switch
 bool QuadNode::contains(ParticleData &_particle)
 {
 	double p_x = (&_particle)->xy->x;
 	double p_y = (&_particle)->xy->y;
-
-
 
 	if (p_x >= this->topLeft.x &&
 		p_x <= this->botRight.x && 
 		p_y >= this->botRight.y &&
 		p_y <= this->topLeft.y)
 	{
-//		std::cout << "found it ! " << std::endl;
 		return true;
 	}
 	else
 	{
-		/*
-		std::cout << p_x << "," << p_y << std::endl;
-		std::cout << " not found in (" <<
-			this->topLeft.x << " , " << this->topLeft.y << ") and (" <<
-			this->botRight.x << " , " << this->botRight.y << ")\n";
-			*/
 		return false;
 
 	}
 }
 
-
+/*
+	ran into some newParticles being passed as nullptrs so I changed my code
+	so that I'm passing by reference.
+*/
 void QuadNode::insert(ParticleData &newParticle)
 {
+	std::unique_lock<std::mutex> subLock(subdivideMutex, std::defer_lock);
+	std::unique_lock<std::mutex> renLock(renegadeMutex, std::defer_lock);
+	std::unique_lock<std::mutex> incLock(increaseMutex, std::defer_lock);
+	std::unique_lock<std::mutex> nuLock(nullMutex, std::defer_lock);
 
+	//checks if particle is within the quadrant
 	if (!this->contains( newParticle ))
 	{
 		std::stringstream ss;
@@ -105,33 +115,24 @@ void QuadNode::insert(ParticleData &newParticle)
 	}
 	
 
-
 	if (this->numParticles > 1)
 	{
-		//std::cout << ">1 "  << std::endl;
-
-		//find quadrant
-		//recurse on quadrant
-
-		//check if subdivided already
-	//	std::cout <<"alpha: "<< nodeArr.size()<<"\n";
-
+		//quadrant has a particle, so subdivide if not yet
+		subLock.lock();
 		if (nodeArr.size() == 0 && divided == false)
 		{
 			this->subdivide();
 		}
-//		newParticle.printParticle();
-	//	std::cout << "\n";
+		subLock.unlock();
 
-
-		if (this->nodeArr[0]->contains(newParticle)) 
+		//check each quadrant and insert if it contains the right coordinates
+		if (this->nodeArr[0]->contains( newParticle)) 
 		{
 			this->nodeArr[0]->insert(newParticle);
 		}
 		else if (this->nodeArr[1]->contains(newParticle)) 
 		{
 			this->nodeArr[1]->insert(newParticle);
-
 		}
 		else if (this->nodeArr[2]->contains(newParticle)) 
 		{
@@ -144,147 +145,123 @@ void QuadNode::insert(ParticleData &newParticle)
 		}
 		else
 		{
+			//particle can't be found for some reason so add to 
+			//vector of renegade particles so we still calculate their 
+			//force
 
-			std::cerr << "a: Particle added to renegades.\n";
-			newParticle.printParticle();
-			std::cout << "\n";
-			Galaxy::renegades.push_back(&(newParticle));
-				//pushback(newParticle);
-			//this->parent->insert(*(newParticle).renegadeHandler());
+			renLock.lock();
+			Galaxy::renegades.push_back(&newParticle);
+			renLock.unlock();
+
 		}
 	}
 	else if (this->numParticles == 1)
 	{
-	//	std::cout << "beta: " << nodeArr.size() << "\n";
-
-
+		subLock.lock();
 		if (this->nodeArr.size() == 0 && this->divided == false)
 		{
-	//		std::cout << "split" << std::endl;
 			this->subdivide();
 		}
-		
-		
-		if ((particle)->xy->x == newParticle.xy->x &&
-			this->particle->xy->y == newParticle.xy->y)
+		subLock.unlock();
+
+		//particle is in the exact same position as another particle
+		//move it slightly
+		//this doesn't need a mutex because it concerns new particles, which only one 
+		//thread has access to
+
+		if (particle != nullptr)
 		{
-		//handle renegades ?			
-			if(newParticle.xy->x <=0)
-				newParticle.xy->x += 0.01;
-			else
-				newParticle.xy->x -= 0.01;
+			if ((particle)->xy->x == newParticle.xy->x &&
+				this->particle->xy->y == newParticle.xy->y)
+			{
+				if (&newParticle.xy->x <= 0)
+					newParticle.xy->x += 0.01;
+				else
+					newParticle.xy->x -= 0.01;
 
+				if (&newParticle.xy->y <= 0)
+					newParticle.xy->y += 0.01;
+				else
+					newParticle.xy->y -= 0.01;
 
-			if (newParticle.xy->y <= 0)
-				newParticle.xy->y += 0.01;
-			else
-				newParticle.xy->y -= 0.01;
-
+			}
 		}
-		
 
-
-
+		// move old particle because the quadrant was subdivided
 		if (this->nodeArr[0]->contains( *particle ))
 		{
-			//std::cout << "old in NE" << std::endl;
 			this->nodeArr[0]->insert(*particle);
+			nuLock.lock();
 			this->particle = nullptr;
+			nuLock.unlock();
+
 		}
 		else if (this->nodeArr[1]->contains( *(this->particle) ))
 		{
-			//std::cout << "old in NW" << std::endl;
-
 			this->nodeArr[1]->insert(*particle);
+			nuLock.lock();
 			this->particle = nullptr;
-
+			nuLock.unlock();
 		}
 		else if (this->nodeArr[2]->contains( *(this->particle)))
 		{
-			//std::cout << "old in SE" << std::endl;
-
 			this->nodeArr[2]->insert(*particle);
+			nuLock.lock();
 			this->particle = nullptr;
-
+			nuLock.unlock();
 		}
 		else if (this->nodeArr[3]->contains( *(this->particle)))
 		{
-			//std::cout << "old in SW" << std::endl;
-
 			this->nodeArr[3]->insert(*particle);
+			nuLock.lock();
 			this->particle = nullptr;
-
+			nuLock.unlock();
 		}
 		else
-		{
-
-
-			std::cerr << "b: Particle added to renegades.\n";
-			newParticle.printParticle();
-			std::cout << "\n";
-			Galaxy::renegades.push_back(&(newParticle));
-
+		{	
+			renLock.lock();
+			Galaxy::renegades.push_back(&newParticle);
+			renLock.unlock();
 
 		}
-		//std::cout << "Handle new particle =" << (&newParticle)->xy->x << std::endl;
 
-			//find quadrant of new
-			//insert on new
-	//	newParticle.printParticle();
-//		std::cout << "\n";
-
+		//add new particle
 		if (this->nodeArr[0]->contains(newParticle))
 		{
-			//std::cout << "new in NE" << std::endl;
-
 			this->nodeArr[0]->insert(newParticle);
 		}
 		else if (this->nodeArr[1]->contains(newParticle))
 		{
-			//std::cout << "new in NW" << std::endl;
-
 			this->nodeArr[1]->insert(newParticle);
 
 		}
 		else if (this->nodeArr[2]->contains(newParticle))
 		{
-			//std::cout << "new in SE" << std::endl;
-
 			this->nodeArr[2]->insert(newParticle);
 
 		}
 		else if (this->nodeArr[3]->contains(newParticle))
 		{
-			//std::cout << "new in SW" << std::endl;
-
 			this->nodeArr[3]->insert(newParticle);
 		}
 		else
 		{
-
-			std::cerr << "c: Particle added to renegades.\n";
-			newParticle.printParticle();
-			std::cout << "\n";
-			Galaxy::renegades.push_back(&(newParticle));
-
+			renLock.lock();
+			Galaxy::renegades.push_back(&newParticle);
+			renLock.unlock();
 
 		}
 	}
 	else if (this->numParticles == 0)
-	{
-	//	std::cout << "gamma: " << nodeArr.size() << "\n";
-
-		//std::cout << " == 0 " << std::endl;
-//		newParticle.printParticle();
-//		std::cout << "\n";
+	{	
+		//add the particle
 		this->particle = &newParticle;
 	}
+	
 	numParticles++;
-	//std::cout << "insert on new_particle" << (&newParticle)->xy->x << std::endl;
-
 
 }
-
+//helper function
 Vector2D QuadNode::getVector(int n)
 {
 	switch (n)
@@ -309,21 +286,6 @@ Vector2D QuadNode::getVector(int n)
 
 void QuadNode::subdivide()
 {
-	/*
-	std::cout << "subdivide begins" << std::endl;
-
-	double width = abs(topLeft.x) + abs(botRight.x);
-	double height = abs(topLeft.y) + abs(botRight.y);
-
-	std::cout << "Width: " << width << std::endl;
-	std::cout << "Height: "<< height << std::endl;
-
-	Vector2D temp_topLeft = topLeft;
-	Vector2D temp_botRight = botRight;
-	*/
-
-
-	//NE
 	Vector2D new_min = Vector2D(center.x, topLeft.y );
 	Vector2D new_max = Vector2D(botRight.x, center.y);
 	nodeArr.push_back(  new QuadNode(new_min, new_max, NE , this) ) ;
@@ -344,73 +306,69 @@ void QuadNode::subdivide()
 	new_max = Vector2D(center.x , botRight.y);
 	nodeArr.push_back(new QuadNode(new_min, new_max, SW, this));
 
-
-
-
 	this->divided = true;
 	this->numSubdivisions++;
-	/*
-	std::cout << "subdivisions: "<<numSubdivisions << std::endl;
-	std::cout << "subdivide ends" << std::endl;
-	*/
 	
 }
 
 void QuadNode::computeMassDistribution()
 {
-	// std::cout << "num of particles: " << numParticles << std::endl;
 	if (numParticles == 1)
 	{
+
 		COM.x = particle->xy->x;
 		COM.y = particle->xy->y;
 
 		totalMass = particle->mState;
-		// std::cout << "COM is (" << COM.x << "," << COM.y << ")" << std::endl;
 	}
 	else
 	{
+
 		totalMass = 0;
 		COM.x = 0;
 		COM.y = 0;
-
-		for (std::vector<QuadNode*>::iterator it = nodeArr.begin(); it != nodeArr.end(); 
-			it++)
+		if (nodeArr.size() > 0)
 		{
-			if ( (*it) )
+			std::thread t_arr[nThreads];
+
+			for (int i = 0; i < 4; i++)
 			{
-
-				(*it)->computeMassDistribution();
-
-				this->totalMass += (*it)->totalMass;
-
-				this->COM.x += (*it)->totalMass*(*it)->COM.x;
-				this->COM.y += (*it)->totalMass*(*it)->COM.y;
+				t_arr[i] = std::thread(&QuadNode::computeMassDistribution, (nodeArr[i]));
 			}
+			for(int i =0; i < 4; i++)
+			{
+				t_arr[i].join();
+			}
+
+			for (int i = 0; i < 4; i++)
+			{
+				this->totalMass += (nodeArr[i])->totalMass;
+				this->COM.x += (nodeArr[i])->totalMass*(nodeArr[i])->COM.x;
+				this->COM.y += (nodeArr[i])->totalMass*(nodeArr[i])->COM.y;
+			}
+			COM.x /= totalMass;
+			COM.y /= totalMass;
 		}
-		COM.x /= totalMass;
-		COM.y /= totalMass;
+
 	}
 }
 
-
-Vector2D QuadNode::calcForce(ParticleData& _particle)
+void QuadNode::calcForce(ParticleData& _particle, int index, Vector2D &forces)
 {
 	Vector2D force1 = this->calcForceTree(_particle);
 
-	//include osmething for renegade stuff
 
 	if (int s = Galaxy::renegades.size())
 	{
 		for (int i = 0; i<s; ++i)
 		{
-			Vector2D force4 = calcAcceleration(_particle, *Galaxy::renegades[i] );
+			Vector2D force4 = calcAcceleration(_particle, *Galaxy::renegades[i]);
 			force1.x += force4.x;
 			force1.y += force4.y;
 		}
 	}
-	 return force1;
+	forces = force1;
 }
-
 
 Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 {
@@ -419,11 +377,9 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 	if (numParticles == 1)
 	{
 		force2 =  calcAcceleration(*particle, _particle);
-		//add debug stuff but not needed here yet
 	}
 	else
 	{
-		//there should be a check here 
 		double x1 = COM.x;
 		double y1 = COM.y;
 		double x2 = _particle.xy->x;
@@ -441,15 +397,10 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 
 			force2.x += k*(x1 - x2);
 			force2.y += k*(y1 - y2);
-/*			double k = G_CONST * (mass1 / (r * r * r));
-			force2.x += k* (x2 - x1);
-			force2.y += k* (y2 - y1);*/
 
-			//add number of calc for debug
 		}
 		else
 		{
-			// subdivided = true
 			Vector2D partial;
 			for (std::vector<QuadNode*>::iterator it = nodeArr.begin();
 				it != nodeArr.end(); it++)
@@ -469,7 +420,6 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 }
 
 
-//new particle acting on this 
 Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
 {
 	Vector2D force3;
@@ -496,63 +446,50 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 	}
 	else
 	{
-		//not possible if two particles are too close together
+		//add no force if two particles are too close together
 		force3.x = force3.y = 0;
 	}
 	return force3;
 }
-/*
 
-Function MainApp::CalcForce
-for all particles
-force = RootNode.CalculateForceFromTree(particle)
-end for
-end
-
-Function force = TreeNode::CalculateForce(targetParticle)
-force = 0
-
-if number of particle equals 1
-force = Gravitational force between targetParticle and particle
-else
-r = distance from nodes center of mass to targetParticle
-d = height of the node
-if (d/r < θ)
-force = Gravitational force between targetParticle and node
-else
-for all child nodes n
-force += n.CalculateForce(particle)
-end for
-end if
-end
-end
-
-*/
 
 void QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
 {
 	if (parent != nullptr)
 	{
-		std::cout << "only the root can call this." << std::endl;
-
-		return;
+		std::stringstream ss;
+		ss << "only the root can call this.";
+		throw std::runtime_error(ss.str());
 	}
 
 	this->reset(topLeft, botRight);
 
-	for (int i = 0; i < NUMBER_PARTICLES; i++)
+	std::thread t_arr1[nThreads];
+	if (arr.size() == 0)
 	{
-		//std::cout << "particle#: " << i << "\n";
-		this->insert(*arr[i]);
+		std::cout << "null\n\n";
+		system("pause");
 	}
+	for (int i = 0; i < nThreads; i++)
+	{
+		t_arr1[i] = std::thread(&QuadNode::insert, this, std::ref(*arr[i]) );
+	}
+
+
+	for (int i = 0; i < nThreads; i++)
+	{
+		t_arr1[i].join();
+	}
+
 }
 
 void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 {
 	if (parent != nullptr)
 	{
-		std::cout << "not root" << std::endl;
-		return;
+		std::stringstream ss;
+		ss << "only the root can call this.";
+		throw std::runtime_error(ss.str());
 	}
 
 	if (nodeArr.size() != 0 )
@@ -581,3 +518,4 @@ void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 
 
 }
+

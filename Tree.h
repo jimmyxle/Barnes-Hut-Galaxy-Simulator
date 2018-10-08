@@ -25,10 +25,11 @@ public:
 	bool contains(ParticleData &particle);
 
 	void computeMassDistribution();
-	Vector2D calcForce(ParticleData& _particle);
+	void calcForce(ParticleData& _particle,int index, Vector2D &forces);
 	Vector2D calcForceTree( ParticleData& _particle);
-	Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2); //new particle acting on this
 
+
+	Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2); //new particle acting on this
 	// variables
 	std::vector<QuadNode*> nodeArr; //4 children, 0 NE, 1 NW, 2SE, 3 SW
 	Vector2D getVector(int n);
@@ -50,11 +51,6 @@ private:
 	int numParticles;
 	int numSubdivisions;
 	Quadrant QUADRANT;
-	// int mass;
-	// Vector2D centerMass;
-	// Vector2D center; //not yet
-
-	//subdivded use for force calculation. true if too close for approx
 
 };
 
