@@ -4,22 +4,19 @@
 #include <stdexcept>
 #include <sstream>
 #include "Galaxy.h"
-#include <thread>
-#include <mutex>
+
+#include "tbb/parallel_for.h"
+#include "tbb/task_scheduler_init.h"
+#include "tbb/task_group.h"
+
 /*
 static/global variables go here 
 */
 
 const double _THETA = 0.9; //close to 1.0, determines # calcs
 const double G_CONST = 6.674 * pow(10.0, -11.0);
-const int nThreads = 300;
 
 std::vector<ParticleData*> Galaxy::renegades;
-std::mutex subdivideMutex;
-std::mutex renegadeMutex;
-std::mutex nullMutex;
-std::mutex increaseMutex;
-std::mutex calcForceMutex;
 
 
 QuadNode::QuadNode()
@@ -63,10 +60,7 @@ QuadNode::~QuadNode()
 	{
 		for (int i = 0; i < 4; i++)
 		{
-
 			delete  nodeArr[i];
-			//nodeArr[i] = nullptr;
-			
 		}
 	}
 	nodeArr.clear();
@@ -101,11 +95,6 @@ bool QuadNode::contains(ParticleData &_particle)
 */
 void QuadNode::insert(ParticleData &newParticle)
 {
-	std::unique_lock<std::mutex> subLock(subdivideMutex, std::defer_lock);
-	std::unique_lock<std::mutex> renLock(renegadeMutex, std::defer_lock);
-	std::unique_lock<std::mutex> incLock(increaseMutex, std::defer_lock);
-	std::unique_lock<std::mutex> nuLock(nullMutex, std::defer_lock);
-
 	//checks if particle is within the quadrant
 	if (!this->contains( newParticle ))
 	{
@@ -114,34 +103,38 @@ void QuadNode::insert(ParticleData &newParticle)
 		throw std::runtime_error(ss.str());
 	}
 	
-
 	if (this->numParticles > 1)
 	{
+
 		//quadrant has a particle, so subdivide if not yet
-		subLock.lock();
 		if (nodeArr.size() == 0 && divided == false)
 		{
 			this->subdivide();
 		}
-		subLock.unlock();
+
+		tbb::task_group g;
 
 		//check each quadrant and insert if it contains the right coordinates
 		if (this->nodeArr[0]->contains( newParticle)) 
 		{
-			this->nodeArr[0]->insert(newParticle);
+
+			g.run([&]{ this->nodeArr[0]->insert(newParticle); });
 		}
 		else if (this->nodeArr[1]->contains(newParticle)) 
 		{
-			this->nodeArr[1]->insert(newParticle);
+			g.run([&] { this->nodeArr[1]->insert(newParticle); });
+
 		}
 		else if (this->nodeArr[2]->contains(newParticle)) 
 		{
-			this->nodeArr[2]->insert(newParticle);
+			g.run([&] { this->nodeArr[2]->insert(newParticle); });
+
 
 		}
 		else if (this->nodeArr[3]->contains(newParticle)) 
 		{
-			this->nodeArr[3]->insert(newParticle);
+			g.run([&] { this->nodeArr[3]->insert(newParticle); });
+
 		}
 		else
 		{
@@ -149,25 +142,23 @@ void QuadNode::insert(ParticleData &newParticle)
 			//vector of renegade particles so we still calculate their 
 			//force
 
-			renLock.lock();
 			Galaxy::renegades.push_back(&newParticle);
-			renLock.unlock();
 
 		}
+		g.wait();
 	}
 	else if (this->numParticles == 1)
 	{
-		subLock.lock();
 		if (this->nodeArr.size() == 0 && this->divided == false)
 		{
 			this->subdivide();
 		}
-		subLock.unlock();
 
 		//particle is in the exact same position as another particle
 		//move it slightly
 		//this doesn't need a mutex because it concerns new particles, which only one 
 		//thread has access to
+		tbb::task_group g;
 
 		if (particle != nullptr)
 		{
@@ -190,67 +181,74 @@ void QuadNode::insert(ParticleData &newParticle)
 		// move old particle because the quadrant was subdivided
 		if (this->nodeArr[0]->contains( *particle ))
 		{
-			this->nodeArr[0]->insert(*particle);
-			nuLock.lock();
-			this->particle = nullptr;
-			nuLock.unlock();
+			g.run([&] { 
+				this->nodeArr[0]->insert(*particle);
+				this->particle = nullptr;
+			});
 
 		}
 		else if (this->nodeArr[1]->contains( *(this->particle) ))
 		{
-			this->nodeArr[1]->insert(*particle);
-			nuLock.lock();
-			this->particle = nullptr;
-			nuLock.unlock();
+
+			g.run([&] {
+				this->nodeArr[1]->insert(*particle);
+				this->particle = nullptr;
+			});
 		}
 		else if (this->nodeArr[2]->contains( *(this->particle)))
 		{
-			this->nodeArr[2]->insert(*particle);
-			nuLock.lock();
-			this->particle = nullptr;
-			nuLock.unlock();
+
+			g.run([&] {
+				this->nodeArr[2]->insert(*particle);
+				this->particle = nullptr;
+			});
 		}
 		else if (this->nodeArr[3]->contains( *(this->particle)))
 		{
-			this->nodeArr[3]->insert(*particle);
-			nuLock.lock();
-			this->particle = nullptr;
-			nuLock.unlock();
+
+			g.run([&] {
+				this->nodeArr[3]->insert(*particle);
+				this->particle = nullptr;
+			});
 		}
 		else
 		{	
-			renLock.lock();
 			Galaxy::renegades.push_back(&newParticle);
-			renLock.unlock();
 
 		}
 
 		//add new particle
 		if (this->nodeArr[0]->contains(newParticle))
 		{
-			this->nodeArr[0]->insert(newParticle);
+			g.run([&] {
+				this->nodeArr[0]->insert(newParticle);
+			});
 		}
 		else if (this->nodeArr[1]->contains(newParticle))
 		{
-			this->nodeArr[1]->insert(newParticle);
-
+			g.run([&] {
+				this->nodeArr[1]->insert(newParticle);
+			});
 		}
 		else if (this->nodeArr[2]->contains(newParticle))
 		{
-			this->nodeArr[2]->insert(newParticle);
+			g.run([&] {
+				this->nodeArr[2]->insert(newParticle);
+			});
 
 		}
 		else if (this->nodeArr[3]->contains(newParticle))
 		{
-			this->nodeArr[3]->insert(newParticle);
+			g.run([&] {
+				this->nodeArr[3]->insert(newParticle);
+			});
 		}
 		else
 		{
-			renLock.lock();
 			Galaxy::renegades.push_back(&newParticle);
-			renLock.unlock();
 
 		}
+		g.wait();
 	}
 	else if (this->numParticles == 0)
 	{	
@@ -329,16 +327,10 @@ void QuadNode::computeMassDistribution()
 		COM.y = 0;
 		if (nodeArr.size() > 0)
 		{
-			std::thread t_arr[nThreads];
 
-			for (int i = 0; i < 4; i++)
-			{
-				t_arr[i] = std::thread(&QuadNode::computeMassDistribution, (nodeArr[i]));
-			}
-			for(int i =0; i < 4; i++)
-			{
-				t_arr[i].join();
-			}
+			tbb::parallel_for(size_t(0), nodeArr.size(), [&](size_t i){
+					nodeArr[i]->computeMassDistribution();
+				});
 
 			for (int i = 0; i < 4; i++)
 			{
@@ -464,22 +456,13 @@ void QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
 
 	this->reset(topLeft, botRight);
 
-	std::thread t_arr1[nThreads];
 	if (arr.size() == 0)
 	{
 		std::cout << "null\n\n";
 		system("pause");
 	}
-	for (int i = 0; i < nThreads; i++)
-	{
-		t_arr1[i] = std::thread(&QuadNode::insert, this, std::ref(*arr[i]) );
-	}
-
-
-	for (int i = 0; i < nThreads; i++)
-	{
-		t_arr1[i].join();
-	}
+	for (int i = 0; i < arr.size(); i++)
+		insert(*arr[i]);
 
 }
 

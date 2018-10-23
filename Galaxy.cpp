@@ -1,8 +1,12 @@
 #include "Galaxy.h"
-#include <thread>
+//#include <thread>
 #include <ctime>
+#include "tbb/parallel_for.h"
+#include "tbb/task_scheduler_init.h"
 
-const int nThreads = 300;
+
+
+//const int nThreads = 300;
 
 Galaxy::Galaxy()
 {
@@ -193,6 +197,10 @@ int Galaxy::running_display()
 		return -1;
 	}
 	glfwMakeContextCurrent(window);
+	/*
+		initialize task sched
+	*/
+	//tbb::task_scheduler_init init(tbb::task_scheduler_init::default_num_threads()); //chagne this later
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -206,7 +214,8 @@ int Galaxy::running_display()
 		root->buildTree(allParticles, NUMBER_PARTICLES);
 
 		//data parallelism
-		root->computeMassDistribution();
+
+		root->computeMassDistribution(); //tbb parallel
 
 
 		//uncomment these to show particles/quadrants
@@ -216,35 +225,23 @@ int Galaxy::running_display()
 		//store forces calculated
 		std::vector<Vector2D> forces1(NUMBER_PARTICLES);
 
-		std::thread t_arr2[nThreads];
-		int max = NUMBER_PARTICLES;
+		//std::thread t_arr2[nThreads];
+		size_t max = NUMBER_PARTICLES;
 
 		//data parallel
-		for (int i = 0; i<nThreads; i++)
-		{
-			t_arr2[i] = std::thread(&QuadNode::calcForce, root,std::ref(*(allParticles[i])),std::ref(i), std::ref(forces1[i]) ); 
-		}
-		
-		for (int i = 0; i < nThreads; i++)
-		{
-			t_arr2[i].join();
-		}
 
-		std::thread t_arr3[nThreads];
-
+		tbb::parallel_for(size_t(0), max, [&](size_t i) {
+			root->calcForce(*(allParticles[i]), i, (forces1[i]) );		
+		});
 
 		//data parallel
-		for (int i = 0; i < nThreads; i++)
-		{
-			t_arr3[i] = std::thread(&ParticleData::calcDistance, allParticles[i],
-			std::ref(forces1[i]) );
-		}
+
+		tbb::parallel_for(size_t(0), max, [&](size_t i) {
+			allParticles[i]->calcDistance(forces1[i]);
+		});
+
 		
 
-		for (int i = 0; i < nThreads; i++)
-		{
-			t_arr3[i].join();
-		}
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -255,6 +252,7 @@ int Galaxy::running_display()
 	}
 	glfwTerminate();
 }
+
 
 
 
@@ -304,73 +302,19 @@ int Galaxy::two_running_display(Galaxy& second)
 
 
 		//data parallel 
-		int const nThreads2 = 600;
-		std::thread t_arr2[nThreads2];
+		size_t max = allParticles.size();
 
-		for (int i = 0; i < nThreads; i += 2)
-		{
-			t_arr2[i] = std::thread(&QuadNode::calcForce, root,
-				std::ref(*(allParticles[i])), std::ref(i), std::ref(forces[i]));
-
-			t_arr2[i+1]= std::thread(&QuadNode::calcForce, (second.root),
-				std::ref(*(second.allParticles[i])), std::ref(i), std::ref(forces2[i]));
-		
-		}
-		/*
-				for (int i = 0; i < NUMBER_PARTICLES; i++)
-		{
-			t_arr4[i] = std::thread(&QuadNode::calcForce, (second.root), 
-				std::ref(*(second.allParticles[i])), std::ref(i), std::ref(forces2[i]));
-		}
-		*/
-
-
-	
-		for (int i = 0; i < nThreads; i++)
-		{
-			t_arr2[i].join();
-		}
-		/*
-				for (int i = 0; i < nThreads; i++)
-		{
-			t_arr2[i].join();
-			//t_arr4[i].join();
-		}
-		*/
+		tbb::parallel_for(size_t(0), max, [&](size_t i) {
+			root->calcForce(*(allParticles[i]), i, (forces[i]));
+			second.root->calcForce(*(allParticles[i]), i, (forces2[i]));
+		});
 
 		//data parallel
-		std::thread t_arr3[nThreads2];
-		// std::thread t_arr5[nThreads];
+		tbb::parallel_for(size_t(0), max, [&](size_t i) {
+			allParticles[i]->calcDistance(forces[i]);
+			second.allParticles[i]->calcDistance(forces2[i]);
 
-		//		not sure why this works 
-
-		for (int i = 0; i < nThreads; i+=2)
-		{
-			t_arr3[i] = std::thread(&ParticleData::calcDistance, allParticles[i],
-				std::ref(forces[i]));
-			t_arr3[i+1] = std::thread(&ParticleData::calcDistance, second.allParticles[i],
-				std::ref(forces2[i]));
-		}
-		for (int i = 0; i < nThreads; i++)
-		{
-			t_arr3[i].join();
-		}
-		/*
-		//this is if the above doesn't work
-				for (int i = 0; i < nThreads; i+=2)
-		{
-
-			t_arr5[i] = std::thread(&ParticleData::calcDistance, second.allParticles[i],
-				std::ref(forces2[i]));
-		}
-		for (int i = 0; i < nThreads; i++)
-		{
-		t_arr5[i].join();
-		}
-		*/
-
-
-
+		});
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

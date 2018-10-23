@@ -1,7 +1,6 @@
 #include "ParticleData.h"
 #include <cassert>
 #include <thread>
-#include <mutex>
 #include <ctime>
 
 #define PI 3.1415926535897;
@@ -87,26 +86,6 @@ std::vector<ParticleData*> ParticleData::generateParticles(double a, double b, i
 	std::clock_t begin = clock();
 
 	int max = std::move(n);
-
-	//better when not parallel
-
-	/*
-	//control thread
-
-	const int nThreads = 1;
-	std::thread t_arr0[nThreads];
-	for (int i = 0; i < nThreads; i++)
-	{
-		int start = i * max / nThreads;
-		int end = (i + 1)*max / nThreads;
-		if (i == nThreads - 1)
-			end = max;
-
-		t_arr0[i] = std::thread( &ParticleData::createParticle, this ,
-			std::ref(a), std::ref(b), std::ref(R), std::ref(start), std::ref(end), std::ref(arr));
-	}
-	*/
-
 	
 	
 	createParticle(a, b, R, 0, max, arr);
