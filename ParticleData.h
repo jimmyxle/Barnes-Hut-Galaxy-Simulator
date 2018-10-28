@@ -24,10 +24,13 @@ public:
 	void reset();
 	bool isNull() const;
 	void printParticle();
-	std::vector<ParticleData*> generateParticles(double a, double b,int n, double R);
+	std::vector<ParticleData*> generateParticles(double a, 
+		double b,int n, double R, double _centerMass);
 	void calcDistance(Vector2D force);
 
-	void createParticle(double a, double b, double radius, int start, int end, std::vector<ParticleData*> &arr);
+	void createParticle(double a, double b, double radius, 
+		int start, int end, std::vector<ParticleData*> &arr,
+		double _centerMass);
 
 
 	Vector2D* xy;

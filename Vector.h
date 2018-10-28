@@ -5,6 +5,7 @@ class Vector2D
 {
 public:
 	void print();
+	void reset();
 	Vector2D();
 	Vector2D(double xvar, double yvar);
 	Vector2D(double xvar, double yvar, double _vx, double _vy);

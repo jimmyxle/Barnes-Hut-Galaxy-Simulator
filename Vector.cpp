@@ -28,3 +28,8 @@ Vector2D::Vector2D(double xvar, double yvar, double _vx, double _vy)
 	vx = _vx;
 	vy = _vy;
 }
+
+void Vector2D::reset()
+{
+	x = y = vx = vy = 0;
+}

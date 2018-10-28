@@ -5,16 +5,22 @@
 #include <sstream>
 #include "Galaxy.h"
 
+#include <assert.h>
+
 #include "tbb/parallel_for.h"
-#include "tbb/task_scheduler_init.h"
 #include "tbb/task_group.h"
 
 /*
 static/global variables go here 
 */
 
-const double _THETA = 0.9; //close to 1.0, determines # calcs
+const double _THETA = 0.9; 
+//close to 1.0, determines # calcs.
+//Smaller number, more calcs
+
 const double G_CONST = 6.674 * pow(10.0, -11.0);
+const double SOFT_CONST = 0.01;
+
 
 std::vector<ParticleData*> Galaxy::renegades;
 
@@ -96,11 +102,31 @@ bool QuadNode::contains(ParticleData &_particle)
 void QuadNode::insert(ParticleData &newParticle)
 {
 	//checks if particle is within the quadrant
-	if (!this->contains( newParticle ))
+	int counter = 0;
+	while(!this->contains( newParticle ) )
 	{
+		if (counter < 4)
+		{
+			int DIST = botRight.x - topLeft.x;
+			double new_x = rand() % DIST;
+			double new_y = rand() % DIST;
+			newParticle.xy->x = new_x;
+			newParticle.xy->y = new_y;
+			counter++;
+		}
+		else
+		{
+			newParticle.xy->x = COM.x;
+			newParticle.xy->y = COM.y;
+		}
+		/*
 		std::stringstream ss;
-		ss << "doesn't contain this particle";
+		ss << "doesn't contain this particle"
+			<<newParticle.xy->x<<","<<newParticle.xy->y
+			<<"\n";
 		throw std::runtime_error(ss.str());
+		*/
+
 	}
 	
 	if (this->numParticles > 1)
@@ -313,9 +339,11 @@ void QuadNode::computeMassDistribution()
 {
 	if (numParticles == 1)
 	{
+		assert(particle);
 
 		COM.x = particle->xy->x;
 		COM.y = particle->xy->y;
+
 
 		totalMass = particle->mState;
 	}
@@ -323,43 +351,53 @@ void QuadNode::computeMassDistribution()
 	{
 
 		totalMass = 0;
-		COM.x = 0;
-		COM.y = 0;
+
+		COM.reset();
+
+		
 		if (nodeArr.size() > 0)
 		{
 
 			tbb::parallel_for(size_t(0), nodeArr.size(), [&](size_t i){
 					nodeArr[i]->computeMassDistribution();
+					this->totalMass += (nodeArr[i])->totalMass;
+					this->COM.x += (nodeArr[i])->totalMass*(nodeArr[i])->COM.x;
+					this->COM.y += (nodeArr[i])->totalMass*(nodeArr[i])->COM.y;
 				});
 
-			for (int i = 0; i < 4; i++)
-			{
-				this->totalMass += (nodeArr[i])->totalMass;
-				this->COM.x += (nodeArr[i])->totalMass*(nodeArr[i])->COM.x;
-				this->COM.y += (nodeArr[i])->totalMass*(nodeArr[i])->COM.y;
-			}
+		
 			COM.x /= totalMass;
 			COM.y /= totalMass;
+
 		}
+		
 
 	}
+
 }
 
 void QuadNode::calcForce(ParticleData& _particle, int index, Vector2D &forces)
 {
 	Vector2D force1 = this->calcForceTree(_particle);
 
-
-	if (int s = Galaxy::renegades.size())
+	
+	if (int s = Galaxy::renegades.size() )
 	{
 		for (int i = 0; i<s; ++i)
 		{
 			Vector2D force4 = calcAcceleration(_particle, *Galaxy::renegades[i]);
-			force1.x += force4.x;
-			force1.y += force4.y;
+
+			double FACTOR = 1;
+
+			force1.x += force4.x * FACTOR;
+			force1.y += force4.y * FACTOR;
 		}
 	}
-	forces = force1;
+
+	
+	forces.x += force1.x;
+	forces.y += force1.y;
+
 }
 
 Vector2D QuadNode::calcForceTree(ParticleData& _particle)
@@ -368,32 +406,48 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 
 	if (numParticles == 1)
 	{
-		force2 =  calcAcceleration(*particle, _particle);
+		force2 =  calcAcceleration(_particle, *particle );
 	}
 	else
 	{
+		
 		double x1 = COM.x;
 		double y1 = COM.y;
+		
+//		std::cout <<"\t\tCOM:"<< x1 << "\t" << y1 << "\n";
+
 		double x2 = _particle.xy->x;
 		double y2 = _particle.xy->y;
 		double mass1 = this->totalMass;
 		double mass2 = _particle.mState;
 
-		double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
-		double d = botRight.x - topLeft.x;
-
+		/*
+		double m_totla = nodeArr[0]->totalMass + nodeArr[1]->totalMass
+			+ nodeArr[2]->totalMass + nodeArr[3]->totalMass;
+		if (mass1 == m_totla)
+			std::cout << "true";
+			*/
+		double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + SOFT_CONST);
+		double d = this->botRight.x - this->topLeft.x;
+		
 		double theta = d / r;
 		if (theta <= _THETA)
 		{
-			double k = G_CONST * ( (mass1) / (r*r*r));
+			double k = G_CONST *  (mass1) / (r*r);
 
-			force2.x += k*(x1 - x2);
+			force2.x += k*(x2-x1)/ (r*r*r);
+			force2.y += k*(x2-x1)/ (r*r*r);
+
+			/*
+					force2.x += k*(x1 - x2);
 			force2.y += k*(y1 - y2);
+			*/
 
 		}
 		else
 		{
 			Vector2D partial;
+
 			for (std::vector<QuadNode*>::iterator it = nodeArr.begin();
 				it != nodeArr.end(); it++)
 			{
@@ -415,25 +469,27 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _particle2)
 {
 	Vector2D force3;
+
+	if (&_particle1 == &_particle2)
+		return force3;
+
 	const double &x1 = _particle1.xy->x;
 	const double &y1 = _particle1.xy->y;
+
 	const double &x2 = _particle2.xy->x;
 	const double &y2 = _particle2.xy->y;
+
 	const double &mass1 = _particle1.mState;
-	const double &mass2 = _particle2.mState;
+	const double &mass2 = _particle2.mState; //*
 
-	double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
+	double r = sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2)+ SOFT_CONST);
 
-	if (x1 == x2 && y1 == y2)
+	 if (r > 0)
 	{
-		return force3 = Vector2D();
-	}
-	else if (r > 0)
-	{
-		double k = G_CONST * ((mass2) / (r*r*r));
+		double k = G_CONST * (mass2) / (r*r);
 
-		force3.x += k * (x2 - x1);
-		force3.y += k * (y2 - y1);
+		force3.x += k * (x2 - x1) /(r*r * r);
+		force3.y += k * (y2 - y1)/(r*r*r);
 
 	}
 	else
@@ -441,6 +497,9 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 		//add no force if two particles are too close together
 		force3.x = force3.y = 0;
 	}
+
+
+
 	return force3;
 }
 
@@ -502,3 +561,61 @@ void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 
 }
 
+void QuadNode::attractCenter(ParticleData& _particle1,double _x, double _y,
+	ParticleData& _center, Vector2D& forces )
+{
+
+	forces = calcAcceleration_forced( _particle1 , _center);
+	
+
+}
+
+
+Vector2D QuadNode::calcAcceleration_forced(ParticleData& _particle1,
+	ParticleData& _particle2)
+{
+	Vector2D force3;
+
+	if (&_particle1 == &_particle2)
+		return force3;
+
+	const double &x1 = _particle1.xy->x;
+	const double &y1 = _particle1.xy->y;
+
+	const double &x2 = _particle2.xy->x;
+	const double &y2 = _particle2.xy->y;
+
+	const double &mass1 = _particle1.mState;
+	const double &mass2 = _particle2.mState; //*
+
+
+	double r = sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
+
+	double k = G_CONST * (mass1*mass2) / (r*r*r);
+
+
+	force3.x += k * (x2 - x1) /(r*r*r) ;
+	force3.y += k * (y2 - y1)/(r*r*r) ;
+	
+	
+	double FACTOR = 100.0 ;
+
+	if (r > 0.8 )
+	{
+		force3.x *= FACTOR;
+		force3.y *= FACTOR;
+	}
+	else
+	{
+		FACTOR = 0.7 ;
+		force3.x *= FACTOR;
+		force3.y *= FACTOR;
+	}
+	/**/
+	
+	/*
+	force3.x *= 100;
+	force3.y *= 100;
+	/**/
+	return force3;
+}

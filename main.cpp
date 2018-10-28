@@ -1,55 +1,20 @@
-/*
-#include "tbb/tbb.h"
-#include <iostream>
-
-#include <mutex>
-
-std::mutex mu;
-
-using namespace tbb;
-
-void Foo(float a)
-{
-	std::lock_guard<std::mutex> lock(mu);
-	std::cout << a<<"\n";
-}
-
-void ParallelApplyFoo(float a[], size_t n) {
-	tbb::parallel_for(size_t(0), n, [&](size_t i) {
-		Foo(a[i]);
-	});
-}
-
-int main(void)
-{
-	const unsigned int max = 10000;
-	float a[max];
-	for (int i = 0; i < max; i++)
-	{
-		a[i] = i;
-	}
-	std::cout << "hey\n";
-	ParallelApplyFoo(a, max);
-
-	int b = 0;
-	std::cin >> b;
-	return 0;
-}
-*/
-
 #include "Galaxy.h"
+
 int main()
 {
 	std::cout << "Start" << std::endl;
 	//-----------------------
 
-	
+	int NUM_P = 150;
 
-	Galaxy* g1 = new Galaxy(-0.5, -0.5);
+	Galaxy* g1 = new Galaxy(-0.1, -0.1, 40000, NUM_P );
 	
-	Galaxy* g2 = new Galaxy(0.5,0.5);
+	Galaxy* g2 = nullptr;
+
+	/*
+	g2 = new Galaxy(0.0,0.0, 5000, NUM_P  );
 	g1->add_galaxy(*g2);
-	
+	/**/
 
 
 
@@ -59,10 +24,12 @@ int main()
 
 	while (repeat)
 	{
+		if (g2)
+		{
+			g1->two_running_display(*g2);
+		}
+		g1->running_display();
 
-		//g1->running_display();
-
-		g1->two_running_display(*g2);
 
 
 
@@ -71,9 +38,8 @@ int main()
 
 		std::cin >> a;
 		if (a != 1)
-		{
 			repeat = false;
-		}
+		
 
 	}
 	

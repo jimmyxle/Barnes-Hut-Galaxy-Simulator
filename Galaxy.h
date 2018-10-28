@@ -10,7 +10,7 @@ class Galaxy
 {
 public:
 	Galaxy();
-	Galaxy(double x, double y);
+	Galaxy(double x, double y, double _centerMass, int _NUM_P);
 	~Galaxy();
 	void displayParticles(std::vector<ParticleData*> arr);
 	void displayParticles(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2);
@@ -23,7 +23,7 @@ public:
 	int two_running_display(Galaxy& second);
 
 	void add_galaxy(Galaxy& galaxy);
-
+	double clockToMilliseconds(clock_t ticks);
 	static std::vector<ParticleData*> renegades;
 
 private:
