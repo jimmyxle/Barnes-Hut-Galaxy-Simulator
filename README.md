@@ -1,10 +1,12 @@
-latest commit
+latest commit:
+
 fixed the NaN bug where the galaxy would disappear when the x,y,vx,vy would become too big/small
 changed two galaxy behaviour
 added attract to center
 added a large body to the center
 
-A1 submission
+A1 submission:
+
 added two galaxy compatability
 added some initial multithreading
 sluggish at 300 threads
