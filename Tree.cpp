@@ -387,7 +387,7 @@ void QuadNode::calcForce(ParticleData& _particle, int index, Vector2D &forces)
 		{
 			Vector2D force4 = calcAcceleration(_particle, *Galaxy::renegades[i]);
 
-			double FACTOR = 1;
+			double FACTOR = 1.5;
 
 			force1.x += force4.x * FACTOR;
 			force1.y += force4.y * FACTOR;
@@ -414,19 +414,11 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 		double x1 = COM.x;
 		double y1 = COM.y;
 		
-//		std::cout <<"\t\tCOM:"<< x1 << "\t" << y1 << "\n";
-
 		double x2 = _particle.xy->x;
 		double y2 = _particle.xy->y;
 		double mass1 = this->totalMass;
 		double mass2 = _particle.mState;
 
-		/*
-		double m_totla = nodeArr[0]->totalMass + nodeArr[1]->totalMass
-			+ nodeArr[2]->totalMass + nodeArr[3]->totalMass;
-		if (mass1 == m_totla)
-			std::cout << "true";
-			*/
 		double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + SOFT_CONST);
 		double d = this->botRight.x - this->topLeft.x;
 		
@@ -437,12 +429,6 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 
 			force2.x += k*(x2-x1)/ (r*r*r);
 			force2.y += k*(x2-x1)/ (r*r*r);
-
-			/*
-					force2.x += k*(x1 - x2);
-			force2.y += k*(y1 - y2);
-			*/
-
 		}
 		else
 		{
@@ -480,7 +466,7 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 	const double &y2 = _particle2.xy->y;
 
 	const double &mass1 = _particle1.mState;
-	const double &mass2 = _particle2.mState; //*
+	const double &mass2 = _particle2.mState; 
 
 	double r = sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2)+ SOFT_CONST);
 
@@ -488,8 +474,8 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 	{
 		double k = G_CONST * (mass2) / (r*r);
 
-		force3.x += k * (x2 - x1) /(r*r * r);
-		force3.y += k * (y2 - y1)/(r*r*r);
+		force3.x += k * (x2 - x1) ;
+		force3.y += k * (y2 - y1);
 
 	}
 	else
@@ -564,10 +550,7 @@ void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 void QuadNode::attractCenter(ParticleData& _particle1,double _x, double _y,
 	ParticleData& _center, Vector2D& forces )
 {
-
 	forces = calcAcceleration_forced( _particle1 , _center);
-	
-
 }
 
 
@@ -594,28 +577,21 @@ Vector2D QuadNode::calcAcceleration_forced(ParticleData& _particle1,
 	double k = G_CONST * (mass1*mass2) / (r*r*r);
 
 
-	force3.x += k * (x2 - x1) /(r*r*r) ;
-	force3.y += k * (y2 - y1)/(r*r*r) ;
+	force3.x += k * (x2 - x1)  ;
+	force3.y += k * (y2 - y1);
 	
 	
-	double FACTOR = 100.0 ;
+	double FACTOR = 500 ;
 
-	if (r > 0.8 )
-	{
-		force3.x *= FACTOR;
-		force3.y *= FACTOR;
-	}
-	else
-	{
-		FACTOR = 0.7 ;
-		force3.x *= FACTOR;
-		force3.y *= FACTOR;
-	}
+
+	force3.x *= FACTOR;
+	force3.y *= FACTOR;
+
 	/**/
 	
 	/*
-	force3.x *= 100;
-	force3.y *= 100;
+	force3.x *= 0.05;
+	force3.y *= 0.05;
 	/**/
 	return force3;
 }

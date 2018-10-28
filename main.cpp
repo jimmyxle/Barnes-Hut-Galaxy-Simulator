@@ -7,14 +7,14 @@ int main()
 
 	int NUM_P = 150;
 
-	Galaxy* g1 = new Galaxy(-0.1, -0.1, 40000, NUM_P );
+	Galaxy* g1 = new Galaxy(-0.1, -0.1, 60000, NUM_P );
 	
 	Galaxy* g2 = nullptr;
 
-	/*
-	g2 = new Galaxy(0.0,0.0, 5000, NUM_P  );
+	
+	g2 = new Galaxy( 0.0 , 0.0 , 50000, NUM_P  );
 	g1->add_galaxy(*g2);
-	/**/
+	
 
 
 

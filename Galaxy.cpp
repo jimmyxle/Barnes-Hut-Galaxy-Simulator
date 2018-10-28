@@ -13,7 +13,7 @@ Galaxy::Galaxy()
 	NUMBER_PARTICLES = 300;
 
 	allParticles.reserve(NUMBER_PARTICLES);
-	allParticles = particle.generateParticles(0, 0, NUMBER_PARTICLES, 0.5, 40000);
+	allParticles = particle.generateParticles(0, 0, NUMBER_PARTICLES, 0.5, 80000);
 	
 	//max is bot right corner , min is top left corner
 	max = new Vector2D(1, -1, 0, 0);
@@ -31,7 +31,7 @@ Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P)
 	//radius of galaxy initially
 	x = _x;
 	y = _y;
-	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, 0.15,
+	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, 0.20,
 		_centerMass);
 	double boxSize = 3 ;
 	max = new Vector2D(boxSize, -boxSize, 0, 0);
@@ -243,48 +243,22 @@ int Galaxy::running_display()
 
 	while (!glfwWindowShouldClose(window))
 	{
-		//std::cout << "cycle begin.\n";
 		begin = clock();
 		start = begin;
 
 
-		//the loop
-
 		//task parallel
 		root->buildTree(allParticles, NUMBER_PARTICLES);
 
-		/*
-		end = clock();
-		double time = (end - begin);
-		std::cout << "buildTree time: " << time << std::endl;
-		begin = end;
-		*/
-		
+	
 		//data parallelism
 
 		root->computeMassDistribution(); //tbb parallel
 
-		/*
-		end = clock();
-		time = (end - begin);
-		std::cout << "CMD time: " << time << std::endl;
-		begin = end;
-		*/
-
 
 		//uncomment these to show particles/quadrants
 		displayParticles(allParticles);
-		
 		//displayQuadrant(*root);
-
-
-		/*
-		end = clock();
-		time = (end - begin);
-		std::cout << "display all time: " << time << std::endl;
-		begin = end;
-		*/
-		
 
 		for (int i = 0; i < max; i++)
 		{
@@ -315,14 +289,6 @@ int Galaxy::running_display()
 
 		/* end calc forces*/
 		
-
-		/*
-		end = clock();
-		time = (end - begin);
-		std::cout << "calculate forces time: " << time << std::endl;
-		begin = end;
-		*/
-
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -374,15 +340,23 @@ int Galaxy::two_running_display(Galaxy& second)
 
 	std::vector<Vector2D> forces(NUMBER_PARTICLES);
 	std::vector<Vector2D> forces2(NUMBER_PARTICLES);
-	std::clock_t begin;
-	std::clock_t end;
+
 
 	size_t max = NUMBER_PARTICLES;
 
+	clock_t deltaTime = 0;
+	unsigned int frames = 0;
+	double  frameRate = 30;
+	double  averageFrameTimeMilliseconds = 33.333;
+
+	std::clock_t end;
+	std::clock_t start;
+	double time;
+
+
 	while (!glfwWindowShouldClose(window))
 	{
-		std::cout << "cycle begin.\n";
-		begin = clock();
+		start = clock();
 
 		//task parallel
 		root->buildTree(allParticles, NUMBER_PARTICLES);
@@ -405,22 +379,36 @@ int Galaxy::two_running_display(Galaxy& second)
 		//data parallel 
 		size_t max = allParticles.size();
 
+		/*
 		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			root->attractCenter(*allParticles[i],x,y, 
-				(*allParticles[0]),(forces[i]));
-			/*
 			root->attractCenter(*allParticles[i], x, y,
-				( *second.allParticles[0] ), (forces[i]));
-				*/
-			/**/
-			second.root->attractCenter(*(second.allParticles[i]), second.x, 
-				second.y, (*second.allParticles[0]), (forces2[i]));
-			/*
+				(*allParticles[0]), (forces[i]));
 			second.root->attractCenter(*(second.allParticles[i]), second.x,
-				second.y, (*allParticles[0]), (forces2[i]));
-			*/
-			/**/
+				second.y, (*second.allParticles[0]), (forces2[i]));
 		});
+
+		/**/
+		
+
+		if (allParticles[0]->mState > second.allParticles[0]->mState)
+		{
+			tbb::parallel_for(size_t(0), max, [&](size_t i) {
+				root->attractCenter(*allParticles[i], x, y,
+					(*allParticles[0]), (forces[i]));
+				second.root->attractCenter(*(second.allParticles[i]), second.x,
+					second.y, (*allParticles[0]), (forces2[i]));
+			});
+		}
+		else
+		{
+			tbb::parallel_for(size_t(0), max, [&](size_t i) {
+				root->attractCenter(*allParticles[i], x, y,
+					(*second.allParticles[0]), (forces[i]));
+				second.root->attractCenter(*(second.allParticles[i]), second.x,
+					second.y, (*second.allParticles[0]), (forces2[i]));
+			});
+		}
+			/**/
 
 		tbb::parallel_for(size_t(0), max, [&](size_t i) {
 			root->calcForce(*(allParticles[i]), i, (forces[i]));
@@ -436,9 +424,24 @@ int Galaxy::two_running_display(Galaxy& second)
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+
 		end = clock();
-		double time = (end - begin);
-		std::cout << "time per cycle: " << time << std::endl;
+		time = (end - start);
+		deltaTime += time;
+
+		frames++;
+
+		if (clockToMilliseconds(deltaTime) > 1000.0) { //every second
+			frameRate = (double)frames*0.5 + frameRate * 0.5; //more stable
+			frames = 0;
+			deltaTime -= CLOCKS_PER_SEC;
+			averageFrameTimeMilliseconds = 1000.0 / (frameRate == 0 ? 0.001 : frameRate);
+
+			std::cout << "\tFrameTime was:\t[" << averageFrameTimeMilliseconds << "]" << std::endl;
+			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
+
+		}
 
 	}
 	glfwTerminate();
@@ -446,6 +449,5 @@ int Galaxy::two_running_display(Galaxy& second)
 
 
 double Galaxy::clockToMilliseconds(clock_t ticks) {
-	// units/(units/time) => time (seconds) * 1000 = milliseconds
 	return (ticks / (double)CLOCKS_PER_SEC)*1000.0;
 }

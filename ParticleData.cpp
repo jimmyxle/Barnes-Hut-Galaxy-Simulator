@@ -63,15 +63,13 @@ void ParticleData::createParticle(double a, double b, double radius,
 
 	for (int i = 1; i < end; i++)
 	{
-
-
 		double r = 0.2 * radius * sqrt(rand() / (double)RAND_MAX);
 		double angle = (rand() / (double)RAND_MAX) * 2 * PI;
 
 		double x = a + r * cos(angle);
 		double y = b + r * sin(angle);
 
-		double FACTOR = 2;
+		double FACTOR = 3;
 		
 		double vx = FACTOR * r*cos(angle);
 		double vy = FACTOR * r*sin(angle);
@@ -93,23 +91,17 @@ std::vector<ParticleData*> ParticleData::generateParticles(double a,
 	std::vector<ParticleData*> arr;
 	arr.reserve(n);
 	srand(time(NULL)); 
-	std::clock_t begin = clock();
-
 	int max = std::move(n);
 	
 	
-	createParticle(a, b, R, 0, max, arr, _centerMass);
-
-	std::clock_t end = clock();
-	double time = (end - begin);
-	std::cout <<"particle generate time: " << time << std::endl;;
+	createParticle(a, b, R, 0, max, arr, std::move(_centerMass));
 	return arr;
 }
 
 void ParticleData::calcDistance(Vector2D force)
 {
-
-		double TIME = 0.5; //set this arbitrarily 
+		//timestep per calculation
+		double TIME = 0.15; 
 		double acc_x = force.x / mState;
 		double acc_y = force.y / mState;
 		//velocity to be added
@@ -121,10 +113,6 @@ void ParticleData::calcDistance(Vector2D force)
 
 		double dist_x = (xy->x) + vel_x * TIME;
 		double dist_y = (xy->y) + vel_y * TIME;
-		/*
-			double dist_x = xy->x + vel_x * TIME;
-		double dist_y = xy->y + vel_y * TIME;
-		*/
 
 		this->xy->vx = vel_x;
 		this->xy->vy = vel_y;
