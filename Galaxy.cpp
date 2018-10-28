@@ -2,7 +2,7 @@
 //#include <thread>
 #include <ctime>
 #include "tbb/parallel_for.h"
-#include "tbb/task_scheduler_init.h"
+
 
 
 
@@ -56,14 +56,16 @@ Galaxy::~Galaxy()
 */
 void Galaxy::add_galaxy(Galaxy& galaxy)
 {
-
+	/*
 	galaxy.renegades.push_back(allParticles[0]);
 	this->renegades.push_back(galaxy.allParticles[0]);
-	/*
+	/**/
+	
 	for (auto it = allParticles.begin(); it != allParticles.end(); it++)
 	{
 		galaxy.renegades.push_back(*it);
 	}
+	/*
 	for (auto it = galaxy.allParticles.begin(); it != galaxy.allParticles.end(); it++)
 	{
 		this->renegades.push_back(*it);
@@ -267,25 +269,28 @@ int Galaxy::running_display()
 
 		/*attract to center*/
 		
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			root->attractCenter(*allParticles[i], x, y,
-				(*allParticles[0]), (forces1[i]));
 	
-		});
-
-
+		/**/
 		//calc forces 
 		
 		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			root->calcForce(*(allParticles[i]), i, (forces1[i]) );		
+			
+			root->attractCenter(*allParticles[i], x, y,
+			(*allParticles[0]), (forces1[i]));
+
+			/**/
+			root->calcForce(*(allParticles[i]), i, (forces1[i]) );	
 		});
 
-		/**/
+		
 		//data parallel
 
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
+		tbb::parallel_for(size_t(1), max, [&](size_t i) {
 			allParticles[i]->calcDistance(forces1[i]);
 		});
+		//do center last
+		allParticles[0]->calcDistance(forces1[0]);
+
 
 		/* end calc forces*/
 		
@@ -379,44 +384,17 @@ int Galaxy::two_running_display(Galaxy& second)
 		//data parallel 
 		size_t max = allParticles.size();
 
-		/*
+		
 		tbb::parallel_for(size_t(0), max, [&](size_t i) {
+			
 			root->attractCenter(*allParticles[i], x, y,
 				(*allParticles[0]), (forces[i]));
 			second.root->attractCenter(*(second.allParticles[i]), second.x,
-				second.y, (*second.allParticles[0]), (forces2[i]));
-		});
-
-		/**/
-		
-
-		if (allParticles[0]->mState > second.allParticles[0]->mState)
-		{
-			tbb::parallel_for(size_t(0), max, [&](size_t i) {
-				root->attractCenter(*allParticles[i], x, y,
-					(*allParticles[0]), (forces[i]));
-				second.root->attractCenter(*(second.allParticles[i]), second.x,
-					second.y, (*allParticles[0]), (forces2[i]));
-			});
-		}
-		else
-		{
-			tbb::parallel_for(size_t(0), max, [&](size_t i) {
-				root->attractCenter(*allParticles[i], x, y,
-					(*second.allParticles[0]), (forces[i]));
-				second.root->attractCenter(*(second.allParticles[i]), second.x,
-					second.y, (*second.allParticles[0]), (forces2[i]));
-			});
-		}
-			/**/
-
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
+				second.y, (*allParticles[0]), (forces2[i]));
+			
 			root->calcForce(*(allParticles[i]), i, (forces[i]));
-			second.root->calcForce(*(allParticles[i]), i, (forces2[i]));
-		});
+			//second.root->calcForce(*(allParticles[i]), i, (forces2[i]));
 
-		//data parallel
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
 			allParticles[i]->calcDistance(forces[i]);
 			second.allParticles[i]->calcDistance(forces2[i]);
 
@@ -426,19 +404,23 @@ int Galaxy::two_running_display(Galaxy& second)
 		glfwPollEvents();
 
 
-		end = clock();
+		end = clock();;
 		time = (end - start);
 		deltaTime += time;
 
 		frames++;
 
-		if (clockToMilliseconds(deltaTime) > 1000.0) { //every second
-			frameRate = (double)frames*0.5 + frameRate * 0.5; //more stable
-			frames = 0;
-			deltaTime -= CLOCKS_PER_SEC;
-			averageFrameTimeMilliseconds = 1000.0 / (frameRate == 0 ? 0.001 : frameRate);
+		if ( (deltaTime) >= 1.0) { //every second
+			std::cout << 1000.0 / double(frames) << std::endl;
 
-			std::cout << "\tFrameTime was:\t[" << averageFrameTimeMilliseconds << "]" << std::endl;
+			double fps = double(frames) / deltaTime;
+
+
+			std::cout << "\t fps was:\t[" << fps << "]" << std::endl;
+
+			frames = 0;
+			
+
 			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
 
 		}

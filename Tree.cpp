@@ -82,9 +82,9 @@ bool QuadNode::contains(ParticleData &_particle)
 	double p_y = (&_particle)->xy->y;
 
 	if (p_x >= this->topLeft.x &&
-		p_x <= this->botRight.x && 
+		p_x < this->botRight.x && 
 		p_y >= this->botRight.y &&
-		p_y <= this->topLeft.y)
+		p_y < this->topLeft.y)
 	{
 		return true;
 	}
@@ -105,29 +105,34 @@ void QuadNode::insert(ParticleData &newParticle)
 	int counter = 0;
 	while(!this->contains( newParticle ) )
 	{
-		if (counter < 4)
-		{
-			int DIST = botRight.x - topLeft.x;
-			double new_x = rand() % DIST;
-			double new_y = rand() % DIST;
-			newParticle.xy->x = new_x;
-			newParticle.xy->y = new_y;
-			counter++;
-		}
-		else
+		counter++;
+
+		if (counter < 5)
 		{
 			newParticle.xy->x = COM.x;
 			newParticle.xy->y = COM.y;
+			newParticle.xy->vx = 0;
+			newParticle.xy->vy = 0;
+			
 		}
-		/*
-		std::stringstream ss;
-		ss << "doesn't contain this particle"
-			<<newParticle.xy->x<<","<<newParticle.xy->y
-			<<"\n";
-		throw std::runtime_error(ss.str());
-		*/
+		else
+		{
 
+			std::stringstream ss;
+			ss << "this particle"
+				<< newParticle.xy->x << "," << newParticle.xy->y
+				<< "is outside node ("
+				<< "min.x=" << topLeft.x << ", "
+				<< "max.x=" << botRight.x << ", "
+				<< "min.y=" << topLeft.y << ", "
+				<< "max.y=" << botRight.y << ")";
+
+
+			throw std::runtime_error(ss.str());
+		}
+		/**/
 	}
+	counter = 0;
 	
 	if (this->numParticles > 1)
 	{
@@ -387,7 +392,7 @@ void QuadNode::calcForce(ParticleData& _particle, int index, Vector2D &forces)
 		{
 			Vector2D force4 = calcAcceleration(_particle, *Galaxy::renegades[i]);
 
-			double FACTOR = 1.5;
+			double FACTOR = 1.0;
 
 			force1.x += force4.x * FACTOR;
 			force1.y += force4.y * FACTOR;
@@ -425,10 +430,10 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 		double theta = d / r;
 		if (theta <= _THETA)
 		{
-			double k = G_CONST *  (mass1) / (r*r);
+			double k = G_CONST *  (mass1) / (r*r*r);
 
-			force2.x += k*(x2-x1)/ (r*r*r);
-			force2.y += k*(x2-x1)/ (r*r*r);
+			force2.x += k*(x2-x1);
+			force2.y += k*(x2-x1);
 		}
 		else
 		{
@@ -472,7 +477,7 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 
 	 if (r > 0)
 	{
-		double k = G_CONST * (mass2) / (r*r);
+		double k = G_CONST * (mass2) / (r*r*r);
 
 		force3.x += k * (x2 - x1) ;
 		force3.y += k * (y2 - y1);
@@ -550,7 +555,8 @@ void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 void QuadNode::attractCenter(ParticleData& _particle1,double _x, double _y,
 	ParticleData& _center, Vector2D& forces )
 {
-	forces = calcAcceleration_forced( _particle1 , _center);
+	forces.x += calcAcceleration_forced( _particle1 , _center).x;
+	forces.y += calcAcceleration_forced( _particle1 , _center).y;
 }
 
 
@@ -580,8 +586,9 @@ Vector2D QuadNode::calcAcceleration_forced(ParticleData& _particle1,
 	force3.x += k * (x2 - x1)  ;
 	force3.y += k * (y2 - y1);
 	
-	
-	double FACTOR = 500 ;
+
+
+	double FACTOR = 10 ;
 
 
 	force3.x *= FACTOR;

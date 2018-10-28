@@ -2,6 +2,8 @@
 #include <cassert>
 #include <thread>
 #include <ctime>
+#include <sstream>
+
 
 #define PI 3.1415926535897;
 const double G_CONST = 6.674 * pow(10.0, -11.0);
@@ -63,20 +65,20 @@ void ParticleData::createParticle(double a, double b, double radius,
 
 	for (int i = 1; i < end; i++)
 	{
-		double r = 0.2 * radius * sqrt(rand() / (double)RAND_MAX);
+		double r = 1 * radius * sqrt(rand() / (double)RAND_MAX);
 		double angle = (rand() / (double)RAND_MAX) * 2 * PI;
 
 		double x = a + r * cos(angle);
 		double y = b + r * sin(angle);
 
-		double FACTOR = 3;
+
+		double DIST = sqrt((a - x)*(a - x) + (b - y)*(b - y));
+		double vel = sqrt(G_CONST*_centerMass / DIST);
+
 		
-		double vx = FACTOR * r*cos(angle);
-		double vy = FACTOR * r*sin(angle);
-		
-		/*
 		double vx, vy;
-		vx = vy = 0;
+		vx = (a - x) / DIST * vel;
+		vy = -(b - y) / DIST * vel;
 		
 		/**/
 		double m = rand()%50 +0.1;
@@ -102,27 +104,28 @@ void ParticleData::calcDistance(Vector2D force)
 {
 		//timestep per calculation
 		double TIME = 0.15; 
+		{
+			if (force.x != force.x)
+				force.x = 0;
+
+			if (force.y != force.y)
+				force.y = 0;
+		}
+
 		double acc_x = force.x / mState;
 		double acc_y = force.y / mState;
+
+		
 		//velocity to be added
 
-		double vel_x = xy->vx + acc_x * TIME;
-		double vel_y = xy->vy + acc_y * TIME;
-
-		//distance to be added
-
-		double dist_x = (xy->x) + vel_x * TIME;
-		double dist_y = (xy->y) + vel_y * TIME;
-
-		this->xy->vx = vel_x;
-		this->xy->vy = vel_y;
-
+		this->xy->vx += acc_x * TIME;
+		this->xy->vy += acc_y * TIME;
 
 		//change velocities
-		this->xy->x = dist_x;
-		this->xy->y = dist_y;
+		this->xy->x += this->xy->vx*TIME;
+		this->xy->y += this->xy->vy*TIME;
 
-
+		/*here*/
 		if (xy->x >= 0.99)
 		{
 			xy->x = -0.95;

@@ -6,18 +6,19 @@ int main()
 	//-----------------------
 
 	int NUM_P = 150;
+	unsigned int solar_mass = 1 * pow(10, 6);
 
-	Galaxy* g1 = new Galaxy(-0.1, -0.1, 60000, NUM_P );
+	Galaxy* g1 = new Galaxy(-0.1, -0.1, solar_mass , NUM_P );
 	
 	Galaxy* g2 = nullptr;
 
 	
-	g2 = new Galaxy( 0.0 , 0.0 , 50000, NUM_P  );
+	g2 = new Galaxy( 0.2 , -0.1 , 50000, NUM_P  );
 	g1->add_galaxy(*g2);
 	
 
 
-
+	/**/
 	//-----------------------
 	bool repeat = true;
 	int a = 0;
