@@ -1,3 +1,18 @@
+/*
+How to link directories and stuff 
+go to youtube link:
+https://www.youtube.com/watch?v=m0nhePeHwFs&list=PLKK11Ligqititws0ZOoGk3SW-TZCar4dK&index=1
+
+
+keep this handy:
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+to easily find incl and lib (use win32)
+
+remember to get build dependencies and add CUDA 5.0
+go to file and change item type to cuda/c++ (make sure to compile and make .exe file)
+
+*/
+
 latest commit:
 
 fixed the NaN bug where the galaxy would disappear when the x,y,vx,vy would become too big/small
