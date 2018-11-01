@@ -6,14 +6,13 @@
 
 
 
-//const int nThreads = 300;
 
 Galaxy::Galaxy()
 {
 	NUMBER_PARTICLES = 300;
 
 	allParticles.reserve(NUMBER_PARTICLES);
-	allParticles = particle.generateParticles(0, 0, NUMBER_PARTICLES, 0.5, 80000);
+	allParticles = particle.generateParticles(0, 0, NUMBER_PARTICLES, 0.5, 80000,0,0);
 	
 	//max is bot right corner , min is top left corner
 	max = new Vector2D(1, -1, 0, 0);
@@ -21,7 +20,7 @@ Galaxy::Galaxy()
 	root = new QuadNode(*min, *max, QuadNode::NONE, nullptr);
 }
 
-Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P)
+Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P, double vel_x, double vel_y)
 {
 	NUMBER_PARTICLES = _NUM_P;
 
@@ -32,7 +31,7 @@ Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P)
 	x = _x;
 	y = _y;
 	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, 0.20,
-		_centerMass);
+		_centerMass, vel_x, vel_y);
 	double boxSize = 3 ;
 	max = new Vector2D(boxSize, -boxSize, 0, 0);
 	min = new Vector2D(-boxSize, boxSize, 0, 0);
@@ -57,20 +56,24 @@ Galaxy::~Galaxy()
 void Galaxy::add_galaxy(Galaxy& galaxy)
 {
 	/*
-	galaxy.renegades.push_back(allParticles[0]);
-	this->renegades.push_back(galaxy.allParticles[0]);
+	galaxy.allParticles.push_back(allParticles[0]);
+	this->allParticles.push_back(galaxy.allParticles[0]);
 	/**/
+	
 	
 	for (auto it = allParticles.begin(); it != allParticles.end(); it++)
 	{
-		galaxy.renegades.push_back(*it);
+		galaxy.allParticles.push_back(*it);
 	}
+
 	/*
+
+	
 	for (auto it = galaxy.allParticles.begin(); it != galaxy.allParticles.end(); it++)
 	{
-		this->renegades.push_back(*it);
+		this->allParticles.push_back(*it);
 	}
-	*/
+	
 	/**/
 
 }
@@ -82,7 +85,9 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor3f(1, 1, 1);
-	glPointSize(1);
+
+
+	glPointSize(3);
 	glBegin(GL_POINTS);
 
 
@@ -125,31 +130,60 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<Parti
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor3f(1, 1, 1);
-	glPointSize(1);
+
+	glPointSize(2);
 	glBegin(GL_POINTS);
 
-	//tried to make this parallel but it wouldn't show anything
 
 
-	for (auto &particle : arr1)
+	int SIZE = arr1.size();
+	bool init = true;
+	do
 	{
-		double x = (particle)->xy->x;
-		double y = (particle)->xy->y;
+		glColor3f(0, 0, 255);
+
+		double x = (arr1[0])->xy->x;
+		double y = (arr1[0])->xy->y;
+		glVertex2d(x, y);
+
+		x = (arr2[0])->xy->x;
+		y = (arr2[0])->xy->y;
+		glVertex2d(x, y);
+
+
+		init = !init;
+	} while (init);
+
+	
+
+	glPointSize(1);
+	glColor3f(1, 1, 1);
+
+	//data parallel
+	for (int i = 1; i < SIZE/2; i++)
+	{
+		double x = (arr1[i])->xy->x;
+		double y = (arr1[i])->xy->y;
 		glVertex2d(x, y);
 	}
+
+	/**/
+
 
 	glColor3f(0, 255, 0);
 
-	for (auto &particle : arr2)
+	for (int i = 1 ; i < SIZE/2; i++)
 	{
-		double x = (particle)->xy->x;
-		double y = (particle)->xy->y;
+		double x = (arr2[i])->xy->x;
+		double y = (arr2[i])->xy->y;
 		glVertex2d(x, y);
+
+		
 	}
-
-
 	glEnd();
 	glPopMatrix();
+
+	
 }
 
 
@@ -274,11 +308,6 @@ int Galaxy::running_display()
 		//calc forces 
 		
 		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			
-			root->attractCenter(*allParticles[i], x, y,
-			(*allParticles[0]), (forces1[i]));
-
-			/**/
 			root->calcForce(*(allParticles[i]), i, (forces1[i]) );	
 		});
 
@@ -351,8 +380,8 @@ int Galaxy::two_running_display(Galaxy& second)
 
 	clock_t deltaTime = 0;
 	unsigned int frames = 0;
-	double  frameRate = 30;
-	double  averageFrameTimeMilliseconds = 33.333;
+	//double  frameRate = 60;
+	//double  averageFrameTimeMilliseconds = 33.333;
 
 	std::clock_t end;
 	std::clock_t start;
@@ -371,8 +400,11 @@ int Galaxy::two_running_display(Galaxy& second)
 		root->computeMassDistribution();
 		second.root->computeMassDistribution();
 
+		//displayParticles(allParticles);
 		displayParticles(allParticles, second.allParticles);
 		//displayQuadrant(*root, *second.root);
+
+		size_t max = allParticles.size()/2;
 
 
 		for (int i = 0; i < max; i++)
@@ -382,23 +414,24 @@ int Galaxy::two_running_display(Galaxy& second)
 		}
 
 		//data parallel 
-		size_t max = allParticles.size();
 
 		
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			
-			root->attractCenter(*allParticles[i], x, y,
-				(*allParticles[0]), (forces[i]));
-			second.root->attractCenter(*(second.allParticles[i]), second.x,
-				second.y, (*allParticles[0]), (forces2[i]));
+		tbb::parallel_for(size_t(1), max, [&](size_t i) 
+		{
 			
 			root->calcForce(*(allParticles[i]), i, (forces[i]));
-			//second.root->calcForce(*(allParticles[i]), i, (forces2[i]));
+			second.root->calcForce(*(second.allParticles[i]), i, (forces2[i]));
 
 			allParticles[i]->calcDistance(forces[i]);
 			second.allParticles[i]->calcDistance(forces2[i]);
-
 		});
+
+
+		//do center last
+		allParticles[0]->calcDistance(forces[0]);
+		second.allParticles[0]->calcDistance(forces2[0]);
+
+
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

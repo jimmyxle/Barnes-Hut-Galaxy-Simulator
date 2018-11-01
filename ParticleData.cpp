@@ -5,7 +5,7 @@
 #include <sstream>
 
 
-#define PI 3.1415926535897;
+const double PI = 3.1415926535897;
 const double G_CONST = 6.674 * pow(10.0, -11.0);
 
 ParticleData::ParticleData()
@@ -59,9 +59,9 @@ void ParticleData::printParticle()
 	push onto the arr vector if this part was parallelized
 */
 void ParticleData::createParticle(double a, double b, double radius, 
-	int start, int end, std::vector<ParticleData*> &arr, double _centerMass)
+	int start, int end, std::vector<ParticleData*> &arr, double _centerMass, double vel_x, double vel_y)
 {
-	arr.push_back(new ParticleData(a,b, _centerMass ,0,0));
+	arr.push_back(new ParticleData(a,b, _centerMass ,vel_x,vel_y));
 
 	for (int i = 1; i < end; i++)
 	{
@@ -71,24 +71,32 @@ void ParticleData::createParticle(double a, double b, double radius,
 		double x = a + r * cos(angle);
 		double y = b + r * sin(angle);
 
-
+		//distance between center and particle
 		double DIST = sqrt((a - x)*(a - x) + (b - y)*(b - y));
-		double vel = sqrt(G_CONST*_centerMass / DIST);
+		double orbital_vel = sqrt(G_CONST*_centerMass / DIST);
 
-		
+		double FACTOR = 0.1;
 		double vx, vy;
-		vx = (a - x) / DIST * vel;
-		vy = -(b - y) / DIST * vel;
+		vx =  orbital_vel * cos(angle + (PI / 2) ) * FACTOR;
+		vy =  orbital_vel * sin(angle + (PI / 2) ) * FACTOR;
+		/*
+		radius - dist / radius
+		*/
+
+
+		/*
+		vx = (a - x) / DIST * orbital_vel * atan(angle);
+		vy = -(b - y) / DIST * orbital_vel* atan(angle);
 		
 		/**/
-		double m = rand()%50 +0.1;
+		double m = rand()%20 +0.1;
 		arr.push_back(new ParticleData(x, y, m, vx, vy));
 		
 	}
 
 }
 std::vector<ParticleData*> ParticleData::generateParticles(double a,
-	double b, int n, double R, double _centerMass)
+	double b, int n, double R, double _centerMass, double vel_x, double vel_y)
 {
 	std::vector<ParticleData*> arr;
 	arr.reserve(n);
@@ -96,7 +104,7 @@ std::vector<ParticleData*> ParticleData::generateParticles(double a,
 	int max = std::move(n);
 	
 	
-	createParticle(a, b, R, 0, max, arr, std::move(_centerMass));
+	createParticle(a, b, R, 0, max, arr, std::move(_centerMass), vel_x, vel_y);
 	return arr;
 }
 
@@ -112,14 +120,25 @@ void ParticleData::calcDistance(Vector2D force)
 				force.y = 0;
 		}
 
+		//std::cout << force.x << std::endl;
+		//std::cout << force.y << std::endl;
+
+
+
+
 		double acc_x = force.x / mState;
 		double acc_y = force.y / mState;
+
 
 		
 		//velocity to be added
 
 		this->xy->vx += acc_x * TIME;
 		this->xy->vy += acc_y * TIME;
+
+	
+
+
 
 		//change velocities
 		this->xy->x += this->xy->vx*TIME;

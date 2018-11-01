@@ -421,19 +421,24 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 		
 		double x2 = _particle.xy->x;
 		double y2 = _particle.xy->y;
+
 		double mass1 = this->totalMass;
 		double mass2 = _particle.mState;
 
+		double r = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
+
+		/*
 		double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + SOFT_CONST);
+		*/
 		double d = this->botRight.x - this->topLeft.x;
 		
 		double theta = d / r;
 		if (theta <= _THETA)
 		{
-			double k = G_CONST *  (mass1) / (r*r*r);
+			double k = G_CONST *  (mass1*mass2) / (r*r);
 
-			force2.x += k*(x2-x1);
-			force2.y += k*(x2-x1);
+			force2.x += k*(x1-x2);
+			force2.y += k*(y1-y2);
 		}
 		else
 		{
@@ -473,11 +478,11 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 	const double &mass1 = _particle1.mState;
 	const double &mass2 = _particle2.mState; 
 
-	double r = sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2)+ SOFT_CONST);
+	double r = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
 
 	 if (r > 0)
 	{
-		double k = G_CONST * (mass2) / (r*r*r);
+		double k = G_CONST * (mass2*mass1) / (r*r);
 
 		force3.x += k * (x2 - x1) ;
 		force3.y += k * (y2 - y1);
@@ -578,8 +583,11 @@ Vector2D QuadNode::calcAcceleration_forced(ParticleData& _particle1,
 	const double &mass2 = _particle2.mState; //*
 
 
-	double r = sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
+	double r = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
 
+	/*
+	double r = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1) + SOFT_CONST);
+	*/
 	double k = G_CONST * (mass1*mass2) / (r*r*r);
 
 
