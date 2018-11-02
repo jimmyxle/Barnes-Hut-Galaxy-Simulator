@@ -5,17 +5,19 @@ int main()
 	std::cout << "Start" << std::endl;
 	//-----------------------
 
-	int NUM_P = 1;
-	unsigned int solar_mass = 1 * pow(10, 8);
-	double initial_x = 0;
+	int NUM_P = 150;
+	unsigned int solar_mass = 1 * pow(10, 7);
+	unsigned int solar_mass_2 = 0.5 * pow(10, 7);
 
-	Galaxy* g1 = new Galaxy(-0.1, -0.1, solar_mass , NUM_P, initial_x, 0 );
-	
+	double initial_x = 0.005;
+
+	Galaxy* g1 = new Galaxy(0.6, 0.6, solar_mass , NUM_P, 0, 0);
+
 	Galaxy* g2 = nullptr;
 
 	
-	g2 = new Galaxy( 0.3, 0.3, solar_mass , NUM_P, -1*initial_x, 0  );
-	g1->add_galaxy(*g2);
+	g2 = new Galaxy( -0.6, -0.6, solar_mass_2 , NUM_P, -1*initial_x, 0 );
+	g1->add_galaxy(*g2, -1 * initial_x, initial_x);
 	
 
 

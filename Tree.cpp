@@ -101,6 +101,9 @@ bool QuadNode::contains(ParticleData &_particle)
 */
 void QuadNode::insert(ParticleData &newParticle)
 {
+	if (&newParticle == particle)
+		return;
+
 	//checks if particle is within the quadrant
 	int counter = 0;
 	while(!this->contains( newParticle ) )
@@ -543,16 +546,18 @@ void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 		nodeArr.clear();
 
 
-		topLeft = min;
-		botRight = max;
-
-		center = Vector2D((min.x + (max.x - min.x) / 2.0), (min.y + (max.y - min.y) / 2.0), 0, 0);
-		numParticles = 0;
-		totalMass = 0;
-		COM.x = 0;
-		COM.y = 0;
-		divided = false;
+		
 	}
+	topLeft = min;
+	botRight = max;
+
+	//particle = nullptr;
+	center = Vector2D((min.x + (max.x - min.x) / 2.0), (min.y + (max.y - min.y) / 2.0), 0, 0);
+	numParticles = 0;
+	totalMass = 0;
+	COM.x = 0;
+	COM.y = 0;
+	divided = false;
 
 
 }

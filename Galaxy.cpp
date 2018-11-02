@@ -30,7 +30,7 @@ Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P, double vel_
 	//radius of galaxy initially
 	x = _x;
 	y = _y;
-	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, 0.20,
+	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, 0.1,
 		_centerMass, vel_x, vel_y);
 	double boxSize = 3 ;
 	max = new Vector2D(boxSize, -boxSize, 0, 0);
@@ -53,12 +53,23 @@ Galaxy::~Galaxy()
 /*
 	this adds each other galaxies forces together without me making too many quadrants
 */
-void Galaxy::add_galaxy(Galaxy& galaxy)
+void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
 {
+
+
+	for (auto it = galaxy.allParticles.begin(); it != galaxy.allParticles.end(); it++)
+	{
+		allParticles.push_back(*it);
+	}
+
+	
+
+	NUMBER_PARTICLES *= 2;
+
 	/*
 	galaxy.allParticles.push_back(allParticles[0]);
 	this->allParticles.push_back(galaxy.allParticles[0]);
-	/**/
+	/*
 	
 	
 	for (auto it = allParticles.begin(); it != allParticles.end(); it++)
@@ -66,7 +77,7 @@ void Galaxy::add_galaxy(Galaxy& galaxy)
 		galaxy.allParticles.push_back(*it);
 	}
 
-	/*
+	
 
 	
 	for (auto it = galaxy.allParticles.begin(); it != galaxy.allParticles.end(); it++)
@@ -84,10 +95,9 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glColor3f(1, 1, 1);
 
-
-	glPointSize(3);
+	glColor3f(0, 255, 0);
+	glPointSize(4);
 	glBegin(GL_POINTS);
 
 
@@ -96,7 +106,6 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	bool init = true;
 	do
 	{
-		glColor3f(0, 255, 0);
 
 
 		double x = (arr[0])->xy->x;
@@ -105,7 +114,9 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 		init = !init;
 	} while (init);
 
+	glEnd();
 	glPointSize(1);
+	glBegin(GL_POINTS);
 	glColor3f(1, 1, 1);
 
 
@@ -129,36 +140,39 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<Parti
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glColor3f(1, 1, 1);
+	glPointSize(4);
 
-	glPointSize(2);
 	glBegin(GL_POINTS);
 
 
 
 	int SIZE = arr1.size();
+
 	bool init = true;
 	do
 	{
-		glColor3f(0, 0, 255);
+		glColor3f(255, 0, 0);
 
 		double x = (arr1[0])->xy->x;
 		double y = (arr1[0])->xy->y;
 		glVertex2d(x, y);
 
-		x = (arr2[0])->xy->x;
-		y = (arr2[0])->xy->y;
+		x = (arr1[SIZE / 2])->xy->x;
+		y = (arr1[SIZE / 2])->xy->y;
 		glVertex2d(x, y);
 
 
 		init = !init;
 	} while (init);
 
-	
+	glEnd();
 
 	glPointSize(1);
-	glColor3f(1, 1, 1);
+	glBegin(GL_POINTS);
 
+	
+
+	glColor3f(0, 255, 0);
 	//data parallel
 	for (int i = 1; i < SIZE/2; i++)
 	{
@@ -170,12 +184,12 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<Parti
 	/**/
 
 
-	glColor3f(0, 255, 0);
+	glColor3f(0, 255, 255);
 
-	for (int i = 1 ; i < SIZE/2; i++)
+	for (int i = SIZE/2+1 ; i < SIZE; i++)
 	{
-		double x = (arr2[i])->xy->x;
-		double y = (arr2[i])->xy->y;
+		double x = (arr1[i])->xy->x;
+		double y = (arr1[i])->xy->y;
 		glVertex2d(x, y);
 
 		
@@ -320,7 +334,6 @@ int Galaxy::running_display()
 		//do center last
 		allParticles[0]->calcDistance(forces1[0]);
 
-
 		/* end calc forces*/
 		
 
@@ -373,15 +386,14 @@ int Galaxy::two_running_display(Galaxy& second)
 	glfwMakeContextCurrent(window);
 
 	std::vector<Vector2D> forces(NUMBER_PARTICLES);
-	std::vector<Vector2D> forces2(NUMBER_PARTICLES);
+	//std::vector<Vector2D> forces2(NUMBER_PARTICLES);
 
 
 	size_t max = NUMBER_PARTICLES;
 
 	clock_t deltaTime = 0;
 	unsigned int frames = 0;
-	//double  frameRate = 60;
-	//double  averageFrameTimeMilliseconds = 33.333;
+
 
 	std::clock_t end;
 	std::clock_t start;
@@ -394,23 +406,26 @@ int Galaxy::two_running_display(Galaxy& second)
 
 		//task parallel
 		root->buildTree(allParticles, NUMBER_PARTICLES);
-		second.root->buildTree( second.allParticles, second.NUMBER_PARTICLES);
+		//second.root->buildTree( second.allParticles, second.NUMBER_PARTICLES);
 
 		//data parallel
 		root->computeMassDistribution();
-		second.root->computeMassDistribution();
+		//second.root->computeMassDistribution();
 
 		//displayParticles(allParticles);
+	//	displayParticles(second.allParticles);
+
+
 		displayParticles(allParticles, second.allParticles);
 		//displayQuadrant(*root, *second.root);
 
-		size_t max = allParticles.size()/2;
+		size_t max = allParticles.size();
 
 
 		for (int i = 0; i < max; i++)
 		{
 			forces[i].reset();
-			forces2[i].reset();
+		//	forces2[i].reset();
 		}
 
 		//data parallel 
@@ -420,16 +435,19 @@ int Galaxy::two_running_display(Galaxy& second)
 		{
 			
 			root->calcForce(*(allParticles[i]), i, (forces[i]));
-			second.root->calcForce(*(second.allParticles[i]), i, (forces2[i]));
+		//	second.root->calcForce(*(second.allParticles[i]), i, (forces2[i]));
 
 			allParticles[i]->calcDistance(forces[i]);
-			second.allParticles[i]->calcDistance(forces2[i]);
+		//	second.allParticles[i]->calcDistance(forces2[i]);
 		});
 
 
 		//do center last
+		root->calcForce(*(allParticles[0]), 0, (forces[0]));
+		//second.root->calcForce(*(second.allParticles[0]), 0, (forces2[0]));
+
 		allParticles[0]->calcDistance(forces[0]);
-		second.allParticles[0]->calcDistance(forces2[0]);
+		//second.allParticles[0]->calcDistance(forces2[0]);
 
 
 

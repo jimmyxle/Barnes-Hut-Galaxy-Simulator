@@ -110,8 +110,10 @@ std::vector<ParticleData*> ParticleData::generateParticles(double a,
 
 void ParticleData::calcDistance(Vector2D force)
 {
+
+
 		//timestep per calculation
-		double TIME = 0.15; 
+		double TIME = 0.3; 
 		{
 			if (force.x != force.x)
 				force.x = 0;
@@ -126,25 +128,73 @@ void ParticleData::calcDistance(Vector2D force)
 
 
 
+
 		double acc_x = force.x / mState;
 		double acc_y = force.y / mState;
 
 
-		
-		//velocity to be added
+		double max = 1.0 / 25;
+
+		if (acc_x >= max)
+		{
+			acc_x = max;
+		}
+		if (acc_x < -max)
+		{
+			acc_x = -max;
+		}
+
+		if (acc_y >= max)
+		{
+			acc_y = max;
+		}
+		if (acc_y < -max)
+		{
+			acc_y = -max;
+		}
+
 
 		this->xy->vx += acc_x * TIME;
 		this->xy->vy += acc_y * TIME;
+
+		//velocity to be added
 
 	
 
 
 
-		//change velocities
-		this->xy->x += this->xy->vx*TIME;
-		this->xy->y += this->xy->vy*TIME;
 
-		/*here*/
+
+		//change velocities
+		this->xy->x += this->xy->vx;
+		this->xy->y += this->xy->vy;
+
+
+		if (xy->x >= 0.99)
+		{
+			xy->x = 0.99;
+			xy->vx *= -0.5;
+		}
+		if (xy->x <= -0.99)
+		{
+			xy->x = -0.99;
+			xy->vx *= -0.5;
+
+		}
+
+		if (xy->y >= 0.99)
+		{
+			xy->y = 0.99;
+			xy->vy *= -0.5;
+
+		}
+		if (xy->y <= -0.99)
+		{
+			xy->y = -0.99;
+			xy->vy *= -0.5;
+
+		}
+		/*here
 		if (xy->x >= 0.99)
 		{
 			xy->x = -0.95;
@@ -170,7 +220,8 @@ void ParticleData::calcDistance(Vector2D force)
 			xy->vy *= 0.5;
 
 		}
-	
-	
+
+		/**/
+
 
 }
