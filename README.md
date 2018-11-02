@@ -1,6 +1,3 @@
-Improved galaxy behaviour
-
-
 /*
 How to link directories and stuff 
 go to youtube link:

@@ -11,12 +11,12 @@ int main()
 
 	double initial_x = 0.005;
 
-	Galaxy* g1 = new Galaxy(0.6, 0.6, solar_mass , NUM_P, 0, 0);
+	Galaxy* g1 = new Galaxy(0.6, 0.6, solar_mass , NUM_P, 0, 0, 0.1);
 
 	Galaxy* g2 = nullptr;
 
 	
-	g2 = new Galaxy( -0.6, -0.6, solar_mass_2 , NUM_P, -1*initial_x, 0 );
+	g2 = new Galaxy( -0.6, -0.6, solar_mass_2 , NUM_P, -1*initial_x, 0, 0.4 );
 	g1->add_galaxy(*g2, -1 * initial_x, initial_x);
 	
 

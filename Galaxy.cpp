@@ -20,7 +20,8 @@ Galaxy::Galaxy()
 	root = new QuadNode(*min, *max, QuadNode::NONE, nullptr);
 }
 
-Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P, double vel_x, double vel_y)
+Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P,
+	double vel_x, double vel_y, double radius)
 {
 	NUMBER_PARTICLES = _NUM_P;
 
@@ -30,7 +31,7 @@ Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P, double vel_
 	//radius of galaxy initially
 	x = _x;
 	y = _y;
-	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, 0.1,
+	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, radius,
 		_centerMass, vel_x, vel_y);
 	double boxSize = 3 ;
 	max = new Vector2D(boxSize, -boxSize, 0, 0);
