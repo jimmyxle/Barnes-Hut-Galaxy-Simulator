@@ -25,7 +25,7 @@ public:
 	bool contains(ParticleData &particle);
 
 	void computeMassDistribution();
-	void calcForce(ParticleData& _particle,int index, Vector2D &forces);
+	void calcForce(ParticleData& _particle, Vector2D &forces);
 	Vector2D calcForceTree( ParticleData& _particle);
 
 

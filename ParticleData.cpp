@@ -4,6 +4,10 @@
 #include <ctime>
 #include <sstream>
 
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
 
 const double PI = 3.1415926535897;
 const double G_CONST = 6.674 * pow(10.0, -11.0);
@@ -162,4 +166,10 @@ void ParticleData::calcDistance(Vector2D force)
 			xy->y = -0.99;
 			xy->vy *= -0.5;
 		}
+}
+
+__global__ void calcDistance(double* force_x, double* force_y, int count)
+{
+
+
 }

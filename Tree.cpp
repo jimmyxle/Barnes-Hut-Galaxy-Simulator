@@ -334,7 +334,7 @@ void QuadNode::computeMassDistribution()
 	}
 }
 
-void QuadNode::calcForce(ParticleData& _particle, int index, Vector2D &forces)
+void QuadNode::calcForce(ParticleData& _particle, Vector2D &forces)
 {
 	Vector2D force1 = this->calcForceTree(_particle);
 	if (int s = Galaxy::renegades.size() )
