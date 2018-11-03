@@ -8,7 +8,10 @@ keep this handy:
 C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
 to easily find incl and lib (use win32)
 
-remember to get build dependencies and add CUDA 5.0
+1. remember to get build dependencies and add CUDA 5.0
+2. vcc (incl and lib)
+3. linker $(CudaToolkitLibdir)\cudart.lib
+
 go to file and change item type to cuda/c++ (make sure to compile and make .exe file)
 
 */
