@@ -4,19 +4,25 @@ int main()
 {
 	std::cout << "Start" << std::endl;
 	//-----------------------
-
+	//set # planets per galaxy
 	int NUM_P = 150;
+	//mass of center particle of each
 	unsigned int solar_mass = 1 * pow(10, 7);
-	unsigned int solar_mass_2 = 0.5 * pow(10, 7);
+	unsigned int solar_mass_2 = 0.8 * pow(10, 7);
 
+	//initial velocity , x variable
 	double initial_x = 0.005;
+	//double initial_y = 0.005;
+
 
 	Galaxy* g1 = new Galaxy(0.6, 0.6, solar_mass , NUM_P, 0, 0, 0.1);
 
 	Galaxy* g2 = nullptr;
 
-	
-	g2 = new Galaxy( -0.6, -0.6, solar_mass_2 , NUM_P, -1*initial_x, 0, 0.4 );
+	/* Uncomment this to add another galaxy */
+
+	/*
+	g2 = new Galaxy( -0.6, -0.6, solar_mass_2 , NUM_P, -1*initial_x, 0, 0.2 );
 	g1->add_galaxy(*g2, -1 * initial_x, initial_x);
 	
 

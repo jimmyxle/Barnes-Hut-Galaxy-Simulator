@@ -1,5 +1,4 @@
 #include "Galaxy.h"
-//#include <thread>
 #include <ctime>
 #include "tbb/parallel_for.h"
 
@@ -52,42 +51,15 @@ Galaxy::~Galaxy()
 }
 
 /*
-	this adds each other galaxies forces together without me making too many quadrants
+	this adds ones planets to the other list and change num planets var in main 
 */
 void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
 {
-
-
 	for (auto it = galaxy.allParticles.begin(); it != galaxy.allParticles.end(); it++)
 	{
 		allParticles.push_back(*it);
 	}
-
-	
-
 	NUMBER_PARTICLES *= 2;
-
-	/*
-	galaxy.allParticles.push_back(allParticles[0]);
-	this->allParticles.push_back(galaxy.allParticles[0]);
-	/*
-	
-	
-	for (auto it = allParticles.begin(); it != allParticles.end(); it++)
-	{
-		galaxy.allParticles.push_back(*it);
-	}
-
-	
-
-	
-	for (auto it = galaxy.allParticles.begin(); it != galaxy.allParticles.end(); it++)
-	{
-		this->allParticles.push_back(*it);
-	}
-	
-	/**/
-
 }
 
 //following functions are for drawing points
@@ -101,14 +73,10 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	glPointSize(4);
 	glBegin(GL_POINTS);
 
-
-
 	int SIZE = arr.size();
 	bool init = true;
 	do
 	{
-
-
 		double x = (arr[0])->xy->x;
 		double y = (arr[0])->xy->y;
 		glVertex2d(x, y);
@@ -120,17 +88,12 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	glBegin(GL_POINTS);
 	glColor3f(1, 1, 1);
 
-
-
-	//data parallel
 	for (int i = 1; i < SIZE; i++)
 	{
 		double x = (arr[i])->xy->x;
 		double y = (arr[i])->xy->y;
 		glVertex2d(x, y);
 	}
-
-	
 
 	glEnd();
 	glPopMatrix();
@@ -144,8 +107,6 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<Parti
 	glPointSize(4);
 
 	glBegin(GL_POINTS);
-
-
 
 	int SIZE = arr1.size();
 
@@ -171,19 +132,13 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<Parti
 	glPointSize(1);
 	glBegin(GL_POINTS);
 
-	
-
 	glColor3f(0, 255, 0);
-	//data parallel
 	for (int i = 1; i < SIZE/2; i++)
 	{
 		double x = (arr1[i])->xy->x;
 		double y = (arr1[i])->xy->y;
 		glVertex2d(x, y);
 	}
-
-	/**/
-
 
 	glColor3f(0, 255, 255);
 
@@ -192,13 +147,9 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<Parti
 		double x = (arr1[i])->xy->x;
 		double y = (arr1[i])->xy->y;
 		glVertex2d(x, y);
-
-		
 	}
 	glEnd();
 	glPopMatrix();
-
-	
 }
 
 
@@ -275,9 +226,6 @@ int Galaxy::running_display()
 	}
 	glfwMakeContextCurrent(window);
 
-
-
-
 	std::vector<Vector2D> forces1(NUMBER_PARTICLES);
 
 	size_t max = NUMBER_PARTICLES;
@@ -301,11 +249,8 @@ int Galaxy::running_display()
 		//task parallel
 		root->buildTree(allParticles, NUMBER_PARTICLES);
 
-	
 		//data parallelism
-
-		root->computeMassDistribution(); //tbb parallel
-
+		root->computeMassDistribution();
 
 		//uncomment these to show particles/quadrants
 		displayParticles(allParticles);
@@ -316,18 +261,13 @@ int Galaxy::running_display()
 			forces1[i].reset();
 		}
 
-		/*attract to center*/
-		
-	
 		/**/
 		//calc forces 
-		
+		//data parallel
+
 		tbb::parallel_for(size_t(0), max, [&](size_t i) {
 			root->calcForce(*(allParticles[i]), i, (forces1[i]) );	
 		});
-
-		
-		//data parallel
 
 		tbb::parallel_for(size_t(1), max, [&](size_t i) {
 			allParticles[i]->calcDistance(forces1[i]);
@@ -336,8 +276,6 @@ int Galaxy::running_display()
 		allParticles[0]->calcDistance(forces1[0]);
 
 		/* end calc forces*/
-		
-
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
@@ -355,7 +293,6 @@ int Galaxy::running_display()
 
 			std::cout << "\tFrameTime was:\t[" << averageFrameTimeMilliseconds <<"]"<< std::endl;
 			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
-
 		}
 
 	}
@@ -387,9 +324,6 @@ int Galaxy::two_running_display(Galaxy& second)
 	glfwMakeContextCurrent(window);
 
 	std::vector<Vector2D> forces(NUMBER_PARTICLES);
-	//std::vector<Vector2D> forces2(NUMBER_PARTICLES);
-
-
 	size_t max = NUMBER_PARTICLES;
 
 	clock_t deltaTime = 0;
@@ -407,15 +341,9 @@ int Galaxy::two_running_display(Galaxy& second)
 
 		//task parallel
 		root->buildTree(allParticles, NUMBER_PARTICLES);
-		//second.root->buildTree( second.allParticles, second.NUMBER_PARTICLES);
 
 		//data parallel
 		root->computeMassDistribution();
-		//second.root->computeMassDistribution();
-
-		//displayParticles(allParticles);
-	//	displayParticles(second.allParticles);
-
 
 		displayParticles(allParticles, second.allParticles);
 		//displayQuadrant(*root, *second.root);
@@ -426,35 +354,23 @@ int Galaxy::two_running_display(Galaxy& second)
 		for (int i = 0; i < max; i++)
 		{
 			forces[i].reset();
-		//	forces2[i].reset();
 		}
 
 		//data parallel 
 
-		
 		tbb::parallel_for(size_t(1), max, [&](size_t i) 
 		{
-			
 			root->calcForce(*(allParticles[i]), i, (forces[i]));
-		//	second.root->calcForce(*(second.allParticles[i]), i, (forces2[i]));
-
 			allParticles[i]->calcDistance(forces[i]);
-		//	second.allParticles[i]->calcDistance(forces2[i]);
 		});
-
 
 		//do center last
 		root->calcForce(*(allParticles[0]), 0, (forces[0]));
-		//second.root->calcForce(*(second.allParticles[0]), 0, (forces2[0]));
 
 		allParticles[0]->calcDistance(forces[0]);
-		//second.allParticles[0]->calcDistance(forces2[0]);
-
-
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
-
 
 		end = clock();;
 		time = (end - start);
@@ -467,11 +383,9 @@ int Galaxy::two_running_display(Galaxy& second)
 
 			double fps = double(frames) / deltaTime;
 
-
 			std::cout << "\t fps was:\t[" << fps << "]" << std::endl;
 
 			frames = 0;
-			
 
 			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
 

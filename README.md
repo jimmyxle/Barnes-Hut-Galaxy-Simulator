@@ -1,9 +1,3 @@
-
-1.build dependencies => cuda 8.0 
-2. include + lib
-3. $(CudaToolkitLibdir)\cudart.lib
-4. type == cuda 
-
 /*
 How to link directories and stuff 
 go to youtube link:
