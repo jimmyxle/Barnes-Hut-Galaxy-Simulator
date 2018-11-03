@@ -275,77 +275,79 @@ int Galaxy::running_display()
 		});
 
 		/*here we try to do cuda first*/
-		double *force_x = new double[max];
-		double *force_y = new double[max];
 
-		double *d_force_x;
-		double *d_force_y;
+		//make array of forces
+		Vector2D *h_force = new Vector2D[max];
+		Vector2D *d_force;
+
+		Vector2D *h_particles = new Vector2D[max];
+		Vector2D *d_particles;
+
 		for (int i = 0; i < max; i++)
 		{
-			force_x[i] = forces1[i].x;
-			force_y[i] = forces1[i].y;
+			h_force[i] = forces1[i];
+			h_particles[i] = *(allParticles[i])->xy;
 		}
 		
-		if (cudaMalloc(&d_force_x, sizeof(double)*max) != cudaSuccess)
+		if (cudaMalloc(&d_force, sizeof(Vector2D)*max) != cudaSuccess)
 		{
-			delete[] force_x;
-			delete[] force_y;
+			delete[] d_force;
 			std::stringstream ss;
 			ss << "Can't malloc d_force_x.";
 			throw std::runtime_error(ss.str());
 		}
-		if (cudaMalloc(&d_force_y, sizeof(double)*max) != cudaSuccess)
+		if (cudaMalloc(&d_particles, sizeof(Vector2D)*max) != cudaSuccess)
 		{
-			cudaFree(d_force_x);
-			delete[] force_x;
-			delete[] force_y;
+			delete[] d_force;
 			std::stringstream ss;
-			ss << "Can't malloc d_force_y.";
+			ss << "Can't malloc d_force_x.";
 			throw std::runtime_error(ss.str());
 		}
 
-		if (cudaMemcpy(d_force_x, force_x, sizeof(double)*max, cudaMemcpyHostToDevice) != cudaSuccess)
+		if (cudaMemcpy(d_force, h_force, sizeof(Vector2D)*max, cudaMemcpyHostToDevice) != cudaSuccess)
 		{
-			cudaFree(d_force_x);
-			cudaFree(d_force_y);
-			delete[] force_x;
-			delete[] force_y;
+			cudaFree(d_force);
+			delete[] h_force;
+			cudaFree(d_particles);
+			delete[] h_particles;
 			std::stringstream ss;
 			ss << "Can't copy  host force_x.";
 			throw std::runtime_error(ss.str());
 		}
-		if (cudaMemcpy(d_force_y, force_y, sizeof(double)*max, cudaMemcpyHostToDevice) != cudaSuccess)
+
+		if (cudaMemcpy(d_particles, h_particles, sizeof(Vector2D)*max, cudaMemcpyHostToDevice) != cudaSuccess)
 		{
-			cudaFree(d_force_x);
-			cudaFree(d_force_y);
-			delete[] force_x;
-			delete[] force_y;
+			cudaFree(d_force);
+			delete[] h_force;
+			cudaFree(d_particles);
+			delete[] h_particles;
 			std::stringstream ss;
-			ss << "Can't copy host force_y.";
+			ss << "Can't copy  host force_x.";
 			throw std::runtime_error(ss.str());
 		}
+
 		 //kernel 
 
 
-		if (cudaMemcpy(force_x, d_force_x, sizeof(double)*max, cudaMemcpyDeviceToHost) != cudaSuccess)
+		if (cudaMemcpy(h_particles, d_particles, sizeof(Vector2D)*max, cudaMemcpyDeviceToHost) != cudaSuccess)
 		{
-			cudaFree(d_force_x);
-			cudaFree(d_force_y);
-			delete[] force_x;
-			delete[] force_y;
+			cudaFree(d_force);
+			delete[] h_force;
+			cudaFree(d_particles);
+			delete[] h_particles;
 			std::stringstream ss;
 			ss << "Can't copy device d_force_x.";
 			throw std::runtime_error(ss.str());
 		}
-		if (cudaMemcpy(force_y, d_force_y, sizeof(double)*max, cudaMemcpyDeviceToHost) != cudaSuccess)
+
+		delete[] h_force;
+		cudaFree(d_force);
+		cudaFree(d_particles);
+		delete[] h_particles;
+
+		for (int i = 0; i < max; i++)
 		{
-			cudaFree(d_force_x);
-			cudaFree(d_force_y);
-			delete[] force_x;
-			delete[] force_y;
-			std::stringstream ss;
-			ss << "Can't copy device d_force_y.";
-			throw std::runtime_error(ss.str());
+			*(allParticles[i])->xy = h_particles[i];
 		}
 
 
