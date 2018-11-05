@@ -347,8 +347,9 @@ void QuadNode::calcForce(ParticleData& _particle, Vector2D &forces)
 			force1.y += force4.y * FACTOR;
 		}
 	}
-	forces.x += force1.x;
-	forces.y += force1.y;
+	
+	forces.x += force1.x/_particle.mState;
+	forces.y += force1.y/_particle.mState;
 }
 
 Vector2D QuadNode::calcForceTree(ParticleData& _particle)
@@ -432,9 +433,6 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 		//add no force if two particles are too close together
 		force3.x = force3.y = 0;
 	}
-
-
-
 	return force3;
 }
 
@@ -455,7 +453,7 @@ void QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
 		ss << "empty list";
 		throw std::runtime_error(ss.str());
 	}
-	for (int i = 0; i < arr.size(); i++)
+	for (unsigned int i = 0; i < arr.size(); i++)
 		insert(*arr[i]);
 }
 

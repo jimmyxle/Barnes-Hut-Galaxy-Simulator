@@ -8,6 +8,90 @@
 
 
 
+__global__ void calcDistance_GPU(Vector2D* forces, Vector2D* particles, int count)
+{
+
+	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	if (idx < count)
+	{
+		Vector2D thisForce = forces[idx];
+		Vector2D thisParticle = particles[idx];
+
+		for (int i = 0; i < count; i++)
+		{
+			if (i == idx) continue;
+
+
+			//timestep per calculation
+			double TIME = 0.3;
+			{
+				//prevents NaN problems
+				if (thisForce.x != thisForce.x)
+					thisForce.x = 0;
+
+				if (thisForce.y != thisForce.y)
+					thisForce.y = 0;
+			}
+
+			double acc_x = forces[idx].x;
+			double acc_y = forces[idx].y;
+			//prevents points from accelerating too far from the center
+			double max = 1.0 / 25;
+			if (acc_x >= max)
+			{
+				acc_x = max;
+			}
+			if (acc_x < -max)
+			{
+				acc_x = -max;
+			}
+
+			if (acc_y >= max)
+			{
+				acc_y = max;
+			}
+			if (acc_y < -max)
+			{
+				acc_y = -max;
+			}
+
+			//velocities
+
+			particles[idx].vx += acc_x * TIME;
+			particles[idx].vy += acc_y * TIME;
+
+			//positions
+			particles[idx].x += particles[idx].vx;
+			particles[idx].y += particles[idx].vy;
+
+			//bounce particles off the borders
+			if (particles[idx].x >= 0.99)
+			{
+				particles[idx].x = 0.99;
+				particles[idx].vx *= -0.5;
+			}
+			if (particles[idx].x <= -0.99)
+			{
+				particles[idx].x = -0.99;
+				particles[idx].vx *= -0.5;
+			}
+			if (particles[idx].y >= 0.99)
+			{
+				particles[idx].y = 0.99;
+				particles[idx].vy *= -0.5;
+			}
+			if (particles[idx].y <= -0.99)
+			{
+				particles[idx].y = -0.99;
+				particles[idx].vy *= -0.5;
+			}
+
+
+		}
+	}
+
+
+}
 
 
 
@@ -235,7 +319,7 @@ int Galaxy::running_display()
 
 	size_t max = NUMBER_PARTICLES;
 
-	clock_t deltaTime = 0;
+	double deltaTime = 0;
 	unsigned int frames = 0;
 	double  frameRate = 30;
 	double  averageFrameTimeMilliseconds = 33.333;
@@ -261,7 +345,7 @@ int Galaxy::running_display()
 		displayParticles(allParticles);
 		//displayQuadrant(*root);
 
-		for (int i = 0; i < max; i++)
+		for (unsigned int i = 0; i < max; i++)
 		{
 			forces1[i].reset();
 		}
@@ -283,7 +367,7 @@ int Galaxy::running_display()
 		Vector2D *h_particles = new Vector2D[max];
 		Vector2D *d_particles;
 
-		for (int i = 0; i < max; i++)
+		for (unsigned int i = 0; i < max; i++)
 		{
 			h_force[i] = forces1[i];
 			h_particles[i] = *(allParticles[i])->xy;
@@ -327,6 +411,10 @@ int Galaxy::running_display()
 		}
 
 		 //kernel 
+	//kernal <<< 1231,13123,1321 >>();
+		calcDistance_GPU<<<((max / 32) + 1), 32>>>(d_force, d_particles, max);
+		cudaDeviceSynchronize();
+
 
 
 		if (cudaMemcpy(h_particles, d_particles, sizeof(Vector2D)*max, cudaMemcpyDeviceToHost) != cudaSuccess)
@@ -339,17 +427,24 @@ int Galaxy::running_display()
 			ss << "Can't copy device d_force_x.";
 			throw std::runtime_error(ss.str());
 		}
+		
+		for (unsigned int i = 0; i < max; i++)
+		{
+			std::cout << h_particles[i].x<<", "<<h_particles[i].y<<"\n";
+		}
+		
+		
 
-		delete[] h_force;
-		cudaFree(d_force);
-		cudaFree(d_particles);
-		delete[] h_particles;
 
-		for (int i = 0; i < max; i++)
+		for (unsigned int i = 0; i < max; i++)
 		{
 			*(allParticles[i])->xy = h_particles[i];
 		}
 
+		cudaFree(d_force);
+		cudaFree(d_particles);
+		delete[] h_particles;
+		delete[] h_force;
 
 
 		/*
@@ -357,6 +452,7 @@ int Galaxy::running_display()
 			allParticles[i]->calcDistance(forces1[i]);
 		});
 		/**/
+
 		//do center last
 		allParticles[0]->calcDistance(forces1[0]);
 
@@ -409,7 +505,7 @@ int Galaxy::two_running_display(Galaxy& second)
 	glfwMakeContextCurrent(window);
 
 	std::vector<Vector2D> forces(NUMBER_PARTICLES);
-	size_t max = NUMBER_PARTICLES;
+	//size_t max = NUMBER_PARTICLES;
 
 	clock_t deltaTime = 0;
 	unsigned int frames = 0;
@@ -436,7 +532,7 @@ int Galaxy::two_running_display(Galaxy& second)
 		size_t max = allParticles.size();
 
 
-		for (int i = 0; i < max; i++)
+		for (unsigned int i = 0; i < max; i++)
 		{
 			forces[i].reset();
 		}
