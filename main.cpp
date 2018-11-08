@@ -9,7 +9,7 @@ int main()
 	std::cout << "Start" << std::endl;
 	//-----------------------
 	//set # planets per galaxy
-	int NUM_P = 150;
+	int NUM_P = 320;
 	//mass of center particle of each
 	double solar_mass = 1 * pow(10, 7);
 	double solar_mass_2 = 0.8 * pow(10, 7);

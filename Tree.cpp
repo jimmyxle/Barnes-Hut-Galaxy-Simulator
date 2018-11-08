@@ -331,8 +331,8 @@ void QuadNode::computeMassDistribution()
 			tbb::parallel_for(size_t(0), nodeArr.size(), [&](size_t i){
 					nodeArr[i]->computeMassDistribution();
 					this->totalMass += (nodeArr[i])->totalMass;
-					this->COM.x += (nodeArr[i])->totalMass*(nodeArr[i])->COM.x;
-					this->COM.y += (nodeArr[i])->totalMass*(nodeArr[i])->COM.y;
+					this->COM.x += (nodeArr[i])->totalMass * (nodeArr[i])->COM.x;
+					this->COM.y += (nodeArr[i])->totalMass * (nodeArr[i])->COM.y;
 				});
 
 			COM.x /= totalMass;
@@ -345,62 +345,60 @@ void QuadNode::computeMassDistribution_iterative(QuadNode* root)
 {
 	if (root == nullptr)
 		return;
-	std::stack<QuadNode*> stk[10000];
+	const unsigned int MAX = 2000;
+	std::stack<QuadNode*> stk1[MAX];
+	std::stack<QuadNode*> stk2[MAX];
 	QuadNode* ptr = root;
+	QuadNode* temp = nullptr;
+	stk1->push(ptr);
+	
 	//stk->push(ptr);
-	do
+	while (!stk1->empty())
 	{
-		while (ptr)
+		//pop an item from stk1 and push to stk2
+		temp = stk1->top();
+		stk1->pop();
+		stk2->push(temp);
+		//push children left -> right
+		if (temp->nodeArr.size() > 0)
 		{
-			if (ptr->nodeArr[3])
-			{
-				for (int i = 3; i >= 0; i--)
-				{
-					stk->push(ptr->nodeArr[i]);
-				}
-				stk->push(ptr);
-				ptr = ptr->nodeArr[0];
-			}
-			ptr = stk->top();
-			stk ->pop();
-
+			for (int i = 0; i <  4; i++)
+				stk1->push(temp->nodeArr[i]);
 		}
-	} while (!stk->empty());
-	/*
-	do
-    { 
-        // Move to leftmost node 
-        while (root) 
-        { 
-            // Push root's right child and then root to stack. 
-            if (root->right) 
-                push(stack, root->right); 
-            push(stack, root); 
-  
-            // Set root as root's left child   
-            root = root->left; 
-        } 
-  
-        // Pop an item from stack and set it as root     
-        root = pop(stack); 
-  
-        // If the popped item has a right child and the right child is not 
-        // processed yet, then make sure right child is processed before root 
-        if (root->right && peek(stack) == root->right) 
-        { 
-            pop(stack);  // remove right child from stack 
-            push(stack, root);  // push root back to stack 
-            root = root->right; // change root so that the right  
-                                // child is processed next 
-        } 
-        else  // Else print root's data and set root as NULL 
-        { 
-            printf("%d ", root->data); 
-            root = NULL; 
-        } 
-    } while (!isEmpty(stack)); 
-	*/
+	
+	}
+	//std::cout << "size of stk2:" << stk2->size() << "\n";
+	while (!stk2->empty())
+	{
+		temp = stk2->top();
+		stk2->pop();
 
+		if (temp->numParticles == 1)
+		{
+			assert( temp->particle );
+			temp->COM.x = temp->particle->xy->x;
+			temp->COM.y = temp->particle->xy->y;
+			temp->totalMass = temp->particle->mState;
+		}
+		else
+		{
+			temp->COM.x = 0;
+			temp->COM.y = 0;
+			temp->totalMass = 0;
+
+			if (temp->nodeArr.size() > 0)
+			{
+				for (int i = 0; i < 4; i++)
+				{
+					temp->COM.x += temp->nodeArr[i]->COM.x * temp->nodeArr[i]->totalMass;
+					temp->COM.y += temp->nodeArr[i]->COM.y * temp->nodeArr[i]->totalMass;
+					temp->totalMass += temp->nodeArr[i]->totalMass;
+				}
+				temp->COM.x /= temp->totalMass;
+				temp->COM.y /= temp->totalMass;
+			}
+		}
+	}
 }
 
 

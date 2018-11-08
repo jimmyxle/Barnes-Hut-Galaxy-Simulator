@@ -239,22 +239,22 @@ int Galaxy::running_display()
 
 	std::clock_t end;
 	std::clock_t begin;
-	std::clock_t start;
+	//std::clock_t start;
 	double time;
 
 	while (!glfwWindowShouldClose(window))
 	{
 		begin = clock();
-		start = begin;
+		//start = begin;
 
 
 		//task parallel
 		depth = root->buildTree(allParticles, NUMBER_PARTICLES);
-	//	std::cout << "current depth is: " << depth << "\n";
+	std::cout << "current depth is: " << depth << "\n";
 		//data parallelism
 
-		//root->computeMassDistribution();
-		root->computeMassDistribution_iterative();
+	//	root->computeMassDistribution();
+		root->computeMassDistribution_iterative(root);
 
 		//uncomment these to show particles/quadrants
 		displayParticles(allParticles);
@@ -284,19 +284,17 @@ int Galaxy::running_display()
 		glfwPollEvents();
 
 		end = clock();
-		time = (end - start);
+		time = (end - begin);
 		deltaTime += time;
 
 		frames++;
 
 		if (clockToMilliseconds(deltaTime) > 1000.0) { //every second
-			frameRate = (double)frames*0.5 + frameRate * 0.5; //more stable
-			frames = 0;
-			deltaTime -= CLOCKS_PER_SEC;
-			averageFrameTimeMilliseconds = 1000.0 / (frameRate == 0 ? 0.001 : frameRate);
+			std::cout << "\t #frames was:\t[" << frames << "]" << std::endl;
+		//	std::cout << "time per cycle: \t[" << time << "]" << std::endl;
 
-			std::cout << "\tFrameTime was:\t[" << averageFrameTimeMilliseconds << "]" << std::endl;
-			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
+			frames = 0;
+			deltaTime = 0;
 		}
 
 	}
