@@ -11,12 +11,13 @@ Galaxy::Galaxy()
 	NUMBER_PARTICLES = 300;
 
 	allParticles.reserve(NUMBER_PARTICLES);
-	allParticles = particle.generateParticles(0, 0, NUMBER_PARTICLES, 0.5, 80000,0,0);
-	
+	allParticles = particle.generateParticles(0, 0, NUMBER_PARTICLES, 0.5, 80000, 0, 0);
+
 	//max is bot right corner , min is top left corner
 	max = new Vector2D(1, -1, 0, 0);
 	min = new Vector2D(-1, 1, 0, 0);
-	root = new QuadNode(*min, *max, QuadNode::NONE, nullptr);
+	root = new QuadNode(*min, *max, QuadNode::NONE, nullptr, 0);
+	depth = 0;
 }
 
 Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P,
@@ -24,7 +25,7 @@ Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P,
 {
 	NUMBER_PARTICLES = _NUM_P;
 
-	allParticles.reserve(NUMBER_PARTICLES );
+	allParticles.reserve(NUMBER_PARTICLES);
 	//pass x,y which are the center of the galaxy
 	//number of particles to make
 	//radius of galaxy initially
@@ -32,11 +33,12 @@ Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P,
 	y = _y;
 	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, radius,
 		_centerMass, vel_x, vel_y);
-	double boxSize = 3 ;
+	double boxSize = 3;
 	max = new Vector2D(boxSize, -boxSize, 0, 0);
 	min = new Vector2D(-boxSize, boxSize, 0, 0);
 
-	root = new QuadNode(*min, *max, QuadNode::NONE, nullptr);
+	root = new QuadNode(*min, *max, QuadNode::NONE, nullptr, 0);
+	depth = 0;
 }
 
 Galaxy::~Galaxy()
@@ -51,7 +53,7 @@ Galaxy::~Galaxy()
 }
 
 /*
-	this adds ones planets to the other list and change num planets var in main 
+this adds ones planets to the other list and change num planets var in main
 */
 void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
 {
@@ -63,7 +65,7 @@ void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
 }
 
 //following functions are for drawing points
-void Galaxy::displayParticles(std::vector<ParticleData*> arr) 
+void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 {
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
@@ -133,7 +135,7 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<Parti
 	glBegin(GL_POINTS);
 
 	glColor3f(0, 255, 0);
-	for (int i = 1; i < SIZE/2; i++)
+	for (int i = 1; i < SIZE / 2; i++)
 	{
 		double x = (arr1[i])->xy->x;
 		double y = (arr1[i])->xy->y;
@@ -142,7 +144,7 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<Parti
 
 	glColor3f(0, 255, 255);
 
-	for (int i = SIZE/2+1 ; i < SIZE; i++)
+	for (int i = SIZE / 2 + 1; i < SIZE; i++)
 	{
 		double x = (arr1[i])->xy->x;
 		double y = (arr1[i])->xy->y;
@@ -247,10 +249,12 @@ int Galaxy::running_display()
 
 
 		//task parallel
-		root->buildTree(allParticles, NUMBER_PARTICLES);
-
+		depth = root->buildTree(allParticles, NUMBER_PARTICLES);
+		std::cout << "current depth is: " << depth << "\n";
 		//data parallelism
-		root->computeMassDistribution();
+
+		//root->computeMassDistribution();
+		root->computeMassDistribution_iterative();
 
 		//uncomment these to show particles/quadrants
 		displayParticles(allParticles);
@@ -266,7 +270,7 @@ int Galaxy::running_display()
 		//data parallel
 
 		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			root->calcForce(*(allParticles[i]), i, (forces1[i]) );	
+			root->calcForce(*(allParticles[i]), (forces1[i]));
 		});
 
 		tbb::parallel_for(size_t(1), max, [&](size_t i) {
@@ -291,12 +295,13 @@ int Galaxy::running_display()
 			deltaTime -= CLOCKS_PER_SEC;
 			averageFrameTimeMilliseconds = 1000.0 / (frameRate == 0 ? 0.001 : frameRate);
 
-			std::cout << "\tFrameTime was:\t[" << averageFrameTimeMilliseconds <<"]"<< std::endl;
+			std::cout << "\tFrameTime was:\t[" << averageFrameTimeMilliseconds << "]" << std::endl;
 			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
 		}
 
 	}
 	glfwTerminate();
+	return 0;
 }
 
 
@@ -358,14 +363,14 @@ int Galaxy::two_running_display(Galaxy& second)
 
 		//data parallel 
 
-		tbb::parallel_for(size_t(1), max, [&](size_t i) 
+		tbb::parallel_for(size_t(1), max, [&](size_t i)
 		{
-			root->calcForce(*(allParticles[i]), i, (forces[i]));
+			root->calcForce(*(allParticles[i]), (forces[i]));
 			allParticles[i]->calcDistance(forces[i]);
 		});
 
 		//do center last
-		root->calcForce(*(allParticles[0]), 0, (forces[0]));
+		root->calcForce(*(allParticles[0]), (forces[0]));
 
 		allParticles[0]->calcDistance(forces[0]);
 
@@ -378,7 +383,7 @@ int Galaxy::two_running_display(Galaxy& second)
 
 		frames++;
 
-		if ( (deltaTime) >= 1.0) { //every second
+		if ((deltaTime) >= 1.0) { //every second
 			std::cout << 1000.0 / double(frames) << std::endl;
 
 			double fps = double(frames) / deltaTime;
@@ -393,6 +398,7 @@ int Galaxy::two_running_display(Galaxy& second)
 
 	}
 	glfwTerminate();
+	return 0;
 }
 
 
