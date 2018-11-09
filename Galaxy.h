@@ -6,6 +6,8 @@
 #include "Tree.h"
 #include <Windows.h>
 
+
+
 class Galaxy
 {
 public:
@@ -37,4 +39,5 @@ private:
 	Vector2D* max;
 	Vector2D* min;
 
+	int depth;
 };

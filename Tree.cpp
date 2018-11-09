@@ -8,6 +8,8 @@
 #include "tbb/parallel_for.h"
 #include "tbb/task_group.h"
 
+#include <stack>
+
 /*
 static/global variables go here 
 */
@@ -37,7 +39,8 @@ QuadNode::QuadNode()
 
 }
 
-QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, QuadNode* _parent)
+QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, 
+	Quadrant quad, QuadNode* _parent, int level_given)
 {
 	particle = nullptr;
 
@@ -55,6 +58,8 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max, Quadrant quad, Quad
 	numParticles = 0;
 	numSubdivisions = 0;
 	QUADRANT = quad;
+
+	level = level_given;
 
 
 }
@@ -93,11 +98,11 @@ bool QuadNode::contains(ParticleData &_particle)
 }
 
 
-void QuadNode::insert(ParticleData &newParticle)
+int QuadNode::insert(ParticleData &newParticle)
 {
 	//if exact same particle, return
 	if (&newParticle == particle)
-		return;
+		return level;
 
 	//checks if particle is within the quadrant
 	if(!this->contains( newParticle ) )
@@ -112,6 +117,7 @@ void QuadNode::insert(ParticleData &newParticle)
 				<< "max.y=" << botRight.y << ")";
 		throw std::runtime_error(ss.str());
 	}
+	int max_depth = this->level;
 	
 	if (this->numParticles > 1)
 	{
@@ -127,22 +133,22 @@ void QuadNode::insert(ParticleData &newParticle)
 		if (this->nodeArr[0]->contains( newParticle)) 
 		{
 
-			g.run([&]{ this->nodeArr[0]->insert(newParticle); });
+			g.run([&]{ max_depth = this->nodeArr[0]->insert(newParticle); });
 		}
 		else if (this->nodeArr[1]->contains(newParticle)) 
 		{
-			g.run([&] { this->nodeArr[1]->insert(newParticle); });
+			g.run([&] { max_depth = this->nodeArr[1]->insert(newParticle); });
 
 		}
 		else if (this->nodeArr[2]->contains(newParticle)) 
 		{
-			g.run([&] { this->nodeArr[2]->insert(newParticle); });
+			g.run([&] { max_depth = this->nodeArr[2]->insert(newParticle); });
 
 
 		}
 		else if (this->nodeArr[3]->contains(newParticle)) 
 		{
-			g.run([&] { this->nodeArr[3]->insert(newParticle); });
+			g.run([&] { max_depth = this->nodeArr[3]->insert(newParticle); });
 
 		}
 		else
@@ -184,14 +190,14 @@ void QuadNode::insert(ParticleData &newParticle)
 		if (this->nodeArr[0]->contains( *particle ))
 		{
 			g.run([&] { 
-				this->nodeArr[0]->insert(*particle);
+				max_depth = this->nodeArr[0]->insert(*particle);
 				this->particle = nullptr;
 			});
 		}
 		else if (this->nodeArr[1]->contains( *(this->particle) ))
 		{
 			g.run([&] {
-				this->nodeArr[1]->insert(*particle);
+				max_depth = this->nodeArr[1]->insert(*particle);
 				this->particle = nullptr;
 			});
 		}
@@ -199,7 +205,7 @@ void QuadNode::insert(ParticleData &newParticle)
 		{
 
 			g.run([&] {
-				this->nodeArr[2]->insert(*particle);
+				max_depth = this->nodeArr[2]->insert(*particle);
 				this->particle = nullptr;
 			});
 		}
@@ -207,7 +213,7 @@ void QuadNode::insert(ParticleData &newParticle)
 		{
 
 			g.run([&] {
-				this->nodeArr[3]->insert(*particle);
+				max_depth = this->nodeArr[3]->insert(*particle);
 				this->particle = nullptr;
 			});
 		}
@@ -220,25 +226,25 @@ void QuadNode::insert(ParticleData &newParticle)
 		if (this->nodeArr[0]->contains(newParticle))
 		{
 			g.run([&] {
-				this->nodeArr[0]->insert(newParticle);
+				max_depth = this->nodeArr[0]->insert(newParticle);
 			});
 		}
 		else if (this->nodeArr[1]->contains(newParticle))
 		{
 			g.run([&] {
-				this->nodeArr[1]->insert(newParticle);
+				max_depth = this->nodeArr[1]->insert(newParticle);
 			});
 		}
 		else if (this->nodeArr[2]->contains(newParticle))
 		{
 			g.run([&] {
-				this->nodeArr[2]->insert(newParticle);
+				max_depth = this->nodeArr[2]->insert(newParticle);
 			});
 		}
 		else if (this->nodeArr[3]->contains(newParticle))
 		{
 			g.run([&] {
-				this->nodeArr[3]->insert(newParticle);
+				max_depth = this->nodeArr[3]->insert(newParticle);
 			});
 		}
 		else
@@ -253,6 +259,7 @@ void QuadNode::insert(ParticleData &newParticle)
 		this->particle = &newParticle;
 	}
 	numParticles++;
+	return max_depth;
 }
 //helper function
 Vector2D QuadNode::getVector(int n)
@@ -281,23 +288,23 @@ void QuadNode::subdivide()
 {
 	Vector2D new_min = Vector2D(center.x, topLeft.y );
 	Vector2D new_max = Vector2D(botRight.x, center.y);
-	nodeArr.push_back(  new QuadNode(new_min, new_max, NE , this) ) ;
+	nodeArr.push_back(  new QuadNode(new_min, new_max, NE , this, level+1) ) ;
 
 	//NW
 	new_min = topLeft;
 	new_max = center;
-	nodeArr.push_back(new QuadNode(new_min, new_max,NW,  this));
+	nodeArr.push_back(new QuadNode(new_min, new_max,NW,  this, level+1));
 
 	//SE
 
 	new_min = center;
 	new_max = botRight;
-	nodeArr.push_back(new QuadNode(new_min, new_max, SE,this));
+	nodeArr.push_back(new QuadNode(new_min, new_max, SE,this, level+1));
 
 	//SW
 	new_min = Vector2D(topLeft.x, center.y);
 	new_max = Vector2D(center.x , botRight.y);
-	nodeArr.push_back(new QuadNode(new_min, new_max, SW, this));
+	nodeArr.push_back(new QuadNode(new_min, new_max, SW, this, level +1));
 
 	this->divided = true;
 	this->numSubdivisions++;
@@ -324,8 +331,8 @@ void QuadNode::computeMassDistribution()
 			tbb::parallel_for(size_t(0), nodeArr.size(), [&](size_t i){
 					nodeArr[i]->computeMassDistribution();
 					this->totalMass += (nodeArr[i])->totalMass;
-					this->COM.x += (nodeArr[i])->totalMass*(nodeArr[i])->COM.x;
-					this->COM.y += (nodeArr[i])->totalMass*(nodeArr[i])->COM.y;
+					this->COM.x += (nodeArr[i])->totalMass * (nodeArr[i])->COM.x;
+					this->COM.y += (nodeArr[i])->totalMass * (nodeArr[i])->COM.y;
 				});
 
 			COM.x /= totalMass;
@@ -334,7 +341,68 @@ void QuadNode::computeMassDistribution()
 	}
 }
 
-void QuadNode::calcForce(ParticleData& _particle, int index, Vector2D &forces)
+void QuadNode::computeMassDistribution_iterative(QuadNode* root)
+{
+	if (root == nullptr)
+		return;
+	const unsigned int MAX = 2000;
+	std::stack<QuadNode*> stk1[MAX];
+	std::stack<QuadNode*> stk2[MAX];
+	QuadNode* ptr = root;
+	QuadNode* temp = nullptr;
+	stk1->push(ptr);
+	
+	//stk->push(ptr);
+	while (!stk1->empty())
+	{
+		//pop an item from stk1 and push to stk2
+		temp = stk1->top();
+		stk1->pop();
+		stk2->push(temp);
+		//push children left -> right
+		if (temp->nodeArr.size() > 0)
+		{
+			for (int i = 0; i <  4; i++)
+				stk1->push(temp->nodeArr[i]);
+		}
+	
+	}
+	//std::cout << "size of stk2:" << stk2->size() << "\n";
+	while (!stk2->empty())
+	{
+		temp = stk2->top();
+		stk2->pop();
+
+		if (temp->numParticles == 1)
+		{
+			assert( temp->particle );
+			temp->COM.x = temp->particle->xy->x;
+			temp->COM.y = temp->particle->xy->y;
+			temp->totalMass = temp->particle->mState;
+		}
+		else
+		{
+			temp->COM.x = 0;
+			temp->COM.y = 0;
+			temp->totalMass = 0;
+
+			if (temp->nodeArr.size() > 0)
+			{
+				for (int i = 0; i < 4; i++)
+				{
+					temp->COM.x += temp->nodeArr[i]->COM.x * temp->nodeArr[i]->totalMass;
+					temp->COM.y += temp->nodeArr[i]->COM.y * temp->nodeArr[i]->totalMass;
+					temp->totalMass += temp->nodeArr[i]->totalMass;
+				}
+				temp->COM.x /= temp->totalMass;
+				temp->COM.y /= temp->totalMass;
+			}
+		}
+	}
+}
+
+
+void QuadNode::calcForce(ParticleData& _particle, Vector2D &forces)
 {
 	Vector2D force1 = this->calcForceTree(_particle);
 	if (int s = Galaxy::renegades.size() )
@@ -347,8 +415,9 @@ void QuadNode::calcForce(ParticleData& _particle, int index, Vector2D &forces)
 			force1.y += force4.y * FACTOR;
 		}
 	}
-	forces.x += force1.x;
-	forces.y += force1.y;
+	
+	forces.x += force1.x/_particle.mState;
+	forces.y += force1.y/_particle.mState;
 }
 
 Vector2D QuadNode::calcForceTree(ParticleData& _particle)
@@ -432,14 +501,11 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 		//add no force if two particles are too close together
 		force3.x = force3.y = 0;
 	}
-
-
-
 	return force3;
 }
 
 
-void QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
+int QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
 {
 	if (parent != nullptr)
 	{
@@ -455,8 +521,18 @@ void QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
 		ss << "empty list";
 		throw std::runtime_error(ss.str());
 	}
-	for (int i = 0; i < arr.size(); i++)
-		insert(*arr[i]);
+	int new_depth = 0;
+	int current_depth = 0;
+
+	for (unsigned int i = 0; i < arr.size(); i++)
+	{
+		new_depth = insert(*arr[i]);
+		if (new_depth > current_depth)
+		{
+			current_depth = new_depth;
+		}
+	}
+	return current_depth;
 }
 
 void QuadNode::reset(const Vector2D &min, const Vector2D &max )

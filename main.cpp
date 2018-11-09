@@ -1,21 +1,25 @@
 #include "Galaxy.h"
 
+//#include <cuda.h>
+//#include <cuda_runtime.h>
+//#include <device_launch_parameters.h>
+
 int main()
 {
 	std::cout << "Start" << std::endl;
 	//-----------------------
 	//set # planets per galaxy
-	int NUM_P = 150;
+	int NUM_P = 320;
 	//mass of center particle of each
-	unsigned int solar_mass = 1 * pow(10, 7);
-	unsigned int solar_mass_2 = 0.8 * pow(10, 7);
+	double solar_mass = 1 * pow(10, 7);
+	double solar_mass_2 = 0.8 * pow(10, 7);
 
 	//initial velocity , x variable
-	double initial_x = 0.005;
+	double initial_x = 0;
 	//double initial_y = 0.005;
 
 
-	Galaxy* g1 = new Galaxy(0.6, 0.6, solar_mass , NUM_P, 0, 0, 0.1);
+	Galaxy* g1 = new Galaxy(0.0, 0.0, solar_mass , NUM_P, initial_x, 0, 0.2);
 
 	Galaxy* g2 = nullptr;
 
@@ -62,3 +66,4 @@ int main()
 	
 	return 0;
 }
+
