@@ -81,7 +81,7 @@ void ParticleData::createParticle(double a, double b, double radius,
 		double orbital_vel = sqrt(G_CONST*_centerMass / DIST);
 
 		//adjust the orbital velocities
-		double FACTOR = 0.1;
+		double FACTOR = 0.001;
 		double vx, vy;
 		vx =  orbital_vel * cos(angle + (PI / 2) ) * FACTOR;
 		vy =  orbital_vel * sin(angle + (PI / 2) ) * FACTOR;
