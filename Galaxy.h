@@ -25,6 +25,8 @@ public:
 	int running_display();
 	int two_running_display(Galaxy& second);
 
+
+
 	void add_galaxy(Galaxy& galaxy, double vel_x, double vel_y);
 	double clockToMilliseconds(clock_t ticks);
 	static std::vector<ParticleData*> renegades;

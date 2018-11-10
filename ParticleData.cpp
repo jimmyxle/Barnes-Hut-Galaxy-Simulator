@@ -81,7 +81,7 @@ void ParticleData::createParticle(double a, double b, double radius,
 		double orbital_vel = sqrt(G_CONST*_centerMass / DIST);
 
 		//adjust the orbital velocities
-		double FACTOR = 0.001;
+		double FACTOR = 0.1;
 		double vx, vy;
 		vx =  orbital_vel * cos(angle + (PI / 2) ) * FACTOR;
 		vy =  orbital_vel * sin(angle + (PI / 2) ) * FACTOR;
@@ -115,27 +115,19 @@ void ParticleData::calcDistance(Vector2D force)
 				force.y = 0;
 		}
 
-		double acc_x = force.x / mState;
-		double acc_y = force.y / mState;
+		double acc_x = force.x;
+		double acc_y = force.y;
 		//prevents points from accelerating too far from the center
 		double max = 1.0 / 25;
 		if (acc_x >= max)
-		{
 			acc_x = max;
-		}
 		if (acc_x < -max)
-		{
 			acc_x = -max;
-		}
 
 		if (acc_y >= max)
-		{
 			acc_y = max;
-		}
 		if (acc_y < -max)
-		{
 			acc_y = -max;
-		}
 
 		//velocities
 		this->xy->vx += acc_x * TIME;
