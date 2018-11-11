@@ -1,7 +1,7 @@
 #include "Galaxy.h"
 #include <ctime>
-#include "tbb/parallel_for.h"
-
+//include "tbb/parallel_for.h"
+#include <thread>
 
 
 
@@ -65,8 +65,10 @@ void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
 }
 
 //following functions are for drawing points
-void Galaxy::displayParticles(std::vector<ParticleData*> arr)
+void Galaxy::displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window)
 {
+	glfwMakeContextCurrent(window);
+
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -101,8 +103,10 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	glPopMatrix();
 }
 
-void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2)
+void Galaxy::displayParticles2(std::vector<ParticleData*> arr1, 
+	std::vector<ParticleData*> arr2, GLFWwindow* window)
 {
+	glfwMakeContextCurrent(window);
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -208,10 +212,14 @@ void Galaxy::displayQuadrant(QuadNode& quad, QuadNode& second)
 	glPopMatrix();
 }
 
+
+double Galaxy::clockToMilliseconds(clock_t ticks) {
+	return (ticks / (double)CLOCKS_PER_SEC)*1000.0;
+}
+
 int Galaxy::running_display()
 {
 	std::cout << "running display mode" << std::endl;
-	Vector2D target;
 
 	GLFWwindow* window;
 	if (!glfwInit())
@@ -226,7 +234,6 @@ int Galaxy::running_display()
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent(window);
 
 	std::vector<Vector2D> forces1(NUMBER_PARTICLES);
 
@@ -240,7 +247,7 @@ int Galaxy::running_display()
 	std::clock_t end;
 	std::clock_t begin;
 	//std::clock_t start;
-	double time;
+	std::clock_t time;
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -250,17 +257,15 @@ int Galaxy::running_display()
 
 		//task parallel
 		depth = root->buildTree(allParticles, NUMBER_PARTICLES);
-	std::cout << "current depth is: " << depth << "\n";
 		//data parallelism
+		std::thread cmd_th(&QuadNode::computeMassDistribution, root);
+		std::thread display_th( &Galaxy::displayParticles, this,std::ref(allParticles), std::ref(window));
 
-	//	root->computeMassDistribution();
-		root->computeMassDistribution_iterative(root);
+		cmd_th.join();
+		display_th.join();
 
-		//uncomment these to show particles/quadrants
-		displayParticles(allParticles);
-		//displayQuadrant(*root);
 
-		for (int i = 0; i < max; i++)
+		for (unsigned int i = 0; i < max; i++)
 		{
 			forces1[i].reset();
 		}
@@ -269,15 +274,15 @@ int Galaxy::running_display()
 		//calc forces 
 		//data parallel
 
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
+		for (unsigned int i = 0; i < max; i++)
+		{
 			root->calcForce(*(allParticles[i]), (forces1[i]));
-		});
 
-		tbb::parallel_for(size_t(1), max, [&](size_t i) {
 			allParticles[i]->calcDistance(forces1[i]);
-		});
-		//do center last
+		}
+
 		allParticles[0]->calcDistance(forces1[0]);
+
 
 		/* end calc forces*/
 		glfwSwapBuffers(window);
@@ -324,7 +329,7 @@ int Galaxy::two_running_display(Galaxy& second)
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent(window);
+	//glfwMakeContextCurrent(window);
 
 	std::vector<Vector2D> forces(NUMBER_PARTICLES);
 	size_t max = NUMBER_PARTICLES;
@@ -335,7 +340,7 @@ int Galaxy::two_running_display(Galaxy& second)
 
 	std::clock_t end;
 	std::clock_t start;
-	double time;
+	std::clock_t time;
 
 
 	while (!glfwWindowShouldClose(window))
@@ -346,31 +351,40 @@ int Galaxy::two_running_display(Galaxy& second)
 		root->buildTree(allParticles, NUMBER_PARTICLES);
 
 		//data parallel
-		root->computeMassDistribution();
 
-		displayParticles(allParticles, second.allParticles);
+		std::thread cmd_th(&QuadNode::computeMassDistribution, root);
+		std::thread display_th(&Galaxy::displayParticles2, this, 
+			std::ref(allParticles), std::ref(second.allParticles), std::ref(window));
+
+		cmd_th.join();
+		display_th.join();
+
+
+		//displayParticles2(allParticles, second.allParticles);
 		//displayQuadrant(*root, *second.root);
 
 		size_t max = allParticles.size();
 
 
-		for (int i = 0; i < max; i++)
+		for (unsigned int i = 0; i < max; i++)
 		{
 			forces[i].reset();
 		}
 
 		//data parallel 
 
-		tbb::parallel_for(size_t(1), max, [&](size_t i)
+		for (unsigned int i = 0; i < max; i++)
 		{
 			root->calcForce(*(allParticles[i]), (forces[i]));
 			allParticles[i]->calcDistance(forces[i]);
-		});
+		}
+		
+		
 
 		//do center last
-		root->calcForce(*(allParticles[0]), (forces[0]));
+	//	root->calcForce(*(allParticles[0]), (forces[0]));
 
-		allParticles[0]->calcDistance(forces[0]);
+	//	allParticles[0]->calcDistance(forces[0]);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -381,16 +395,14 @@ int Galaxy::two_running_display(Galaxy& second)
 
 		frames++;
 
-		if ((deltaTime) >= 1.0) { //every second
-			std::cout << 1000.0 / double(frames) << std::endl;
+		if ((deltaTime) >= 1000) { //every second
 
-			double fps = double(frames) / deltaTime;
 
-			std::cout << "\t fps was:\t[" << fps << "]" << std::endl;
+			std::cout << "\t fps was:\t[" << frames << "]" << std::endl;
 
 			frames = 0;
+			deltaTime = 0;
 
-			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
 
 		}
 
@@ -399,7 +411,3 @@ int Galaxy::two_running_display(Galaxy& second)
 	return 0;
 }
 
-
-double Galaxy::clockToMilliseconds(clock_t ticks) {
-	return (ticks / (double)CLOCKS_PER_SEC)*1000.0;
-}
