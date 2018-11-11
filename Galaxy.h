@@ -15,8 +15,9 @@ public:
 	Galaxy(double x, double y, double _centerMass, int _NUM_P,
 		double vel_x, double vel_y, double radius);
 	~Galaxy();
-	void displayParticles(std::vector<ParticleData*> arr);
-	void displayParticles(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2);
+	void displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window);
+	void displayParticles2(std::vector<ParticleData*> arr1,
+		std::vector<ParticleData*> arr2, GLFWwindow* window);
 
 	void recursiveBoxes(QuadNode& qt, double factor);
 	void displayQuadrant(QuadNode& quad);
