@@ -1,3 +1,12 @@
+add these to cuda patch
+/*
+std::thread cmd_th(&QuadNode::computeMassDistribution, root);
+std::thread display_th( &Galaxy::displayParticles, this,std::ref(allParticles), std::ref(window));
+
+cmd_th.join();
+display_th.join();
+*/
+
 /*
 How to link directories and stuff 
 go to youtube link:
