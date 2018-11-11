@@ -5,8 +5,9 @@
 #include <sstream>
 #include "Galaxy.h"
 #include <assert.h>
-#include "tbb/parallel_for.h"
-#include "tbb/task_group.h"
+
+//#include "tbb/parallel_for.h"
+//#include "tbb/task_group.h"
 
 #include <stack>
 
@@ -127,28 +128,28 @@ int QuadNode::insert(ParticleData &newParticle)
 			this->subdivide();
 		}
 
-		tbb::task_group g;
+
 
 		//check each quadrant and insert if it contains the right coordinates
 		if (this->nodeArr[0]->contains( newParticle)) 
 		{
 
-			g.run([&]{ max_depth = this->nodeArr[0]->insert(newParticle); });
+			max_depth = this->nodeArr[0]->insert(newParticle);
 		}
 		else if (this->nodeArr[1]->contains(newParticle)) 
 		{
-			g.run([&] { max_depth = this->nodeArr[1]->insert(newParticle); });
+		max_depth = this->nodeArr[1]->insert(newParticle);
 
 		}
 		else if (this->nodeArr[2]->contains(newParticle)) 
 		{
-			g.run([&] { max_depth = this->nodeArr[2]->insert(newParticle); });
+	 max_depth = this->nodeArr[2]->insert(newParticle);
 
 
 		}
 		else if (this->nodeArr[3]->contains(newParticle)) 
 		{
-			g.run([&] { max_depth = this->nodeArr[3]->insert(newParticle); });
+			max_depth = this->nodeArr[3]->insert(newParticle);
 
 		}
 		else
@@ -158,7 +159,6 @@ int QuadNode::insert(ParticleData &newParticle)
 			//force
 			Galaxy::renegades.push_back(&newParticle);
 		}
-		g.wait();
 	}
 	else if (this->numParticles == 1)
 	{
@@ -168,7 +168,6 @@ int QuadNode::insert(ParticleData &newParticle)
 		}
 		//particle is in the exact same position as another particle
 		//move it slightly
-		tbb::task_group g;
 		if (particle != nullptr)
 		{
 			if ((particle)->xy->x == newParticle.xy->x &&
@@ -189,33 +188,33 @@ int QuadNode::insert(ParticleData &newParticle)
 		// move old particle because the quadrant was subdivided
 		if (this->nodeArr[0]->contains( *particle ))
 		{
-			g.run([&] { 
+	
 				max_depth = this->nodeArr[0]->insert(*particle);
 				this->particle = nullptr;
-			});
+		
 		}
 		else if (this->nodeArr[1]->contains( *(this->particle) ))
 		{
-			g.run([&] {
+		
 				max_depth = this->nodeArr[1]->insert(*particle);
 				this->particle = nullptr;
-			});
+			
 		}
 		else if (this->nodeArr[2]->contains( *(this->particle)))
 		{
 
-			g.run([&] {
+
 				max_depth = this->nodeArr[2]->insert(*particle);
 				this->particle = nullptr;
-			});
+		
 		}
 		else if (this->nodeArr[3]->contains( *(this->particle)))
 		{
 
-			g.run([&] {
+		
 				max_depth = this->nodeArr[3]->insert(*particle);
 				this->particle = nullptr;
-			});
+	
 		}
 		else
 		{	
@@ -225,33 +224,33 @@ int QuadNode::insert(ParticleData &newParticle)
 		//add new particle
 		if (this->nodeArr[0]->contains(newParticle))
 		{
-			g.run([&] {
+		
 				max_depth = this->nodeArr[0]->insert(newParticle);
-			});
+		
 		}
 		else if (this->nodeArr[1]->contains(newParticle))
 		{
-			g.run([&] {
+	
 				max_depth = this->nodeArr[1]->insert(newParticle);
-			});
+		
 		}
 		else if (this->nodeArr[2]->contains(newParticle))
 		{
-			g.run([&] {
+			
 				max_depth = this->nodeArr[2]->insert(newParticle);
-			});
+		
 		}
 		else if (this->nodeArr[3]->contains(newParticle))
 		{
-			g.run([&] {
+			
 				max_depth = this->nodeArr[3]->insert(newParticle);
-			});
+		
 		}
 		else
 		{
 			Galaxy::renegades.push_back(&newParticle);
 		}
-		g.wait();
+	
 	}
 	else if (this->numParticles == 0)
 	{	
@@ -328,12 +327,12 @@ void QuadNode::computeMassDistribution()
 		if (nodeArr.size() > 0)
 		{
 			//task parallel
-			tbb::parallel_for(size_t(0), nodeArr.size(), [&](size_t i){
+			for (unsigned int i = 0; i < nodeArr.size(); i++) {
 					nodeArr[i]->computeMassDistribution();
 					this->totalMass += (nodeArr[i])->totalMass;
 					this->COM.x += (nodeArr[i])->totalMass * (nodeArr[i])->COM.x;
 					this->COM.y += (nodeArr[i])->totalMass * (nodeArr[i])->COM.y;
-				});
+				}
 
 			COM.x /= totalMass;
 			COM.y /= totalMass;
