@@ -16,7 +16,7 @@ public:
 		double vel_x, double vel_y, double radius);
 	~Galaxy();
 	void displayParticles(std::vector<ParticleData*> arr);
-	void displayParticles(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2);
+	void displayParticles2(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2);
 
 	void recursiveBoxes(QuadNode& qt, double factor);
 	void displayQuadrant(QuadNode& quad);
