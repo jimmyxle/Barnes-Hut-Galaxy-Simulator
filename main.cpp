@@ -18,7 +18,7 @@ int main()
 	double initial_x = 0;
 	//double initial_y = 0.005;
 
-	/*
+	
 	Galaxy* g1 = new Galaxy(0.6, 0.6, solar_mass , NUM_P, initial_x, 0, 0.2);
 
 	Galaxy* g2 = nullptr;
@@ -37,15 +37,13 @@ int main()
 	int a = 0;
 
 	
-	{
-		if (g2)
-		{
-			g1->two_running_display(*g2);
-		}
-		else
-			g1->running_display();
+	
+	if (g2)
+		g1->two_running_display(*g2);
+	else
+		g1->running_display();
 
-	}
+	
 	
 	//----------------------
 	
