@@ -1,6 +1,5 @@
 #include "Galaxy.h"
 #include <ctime>
-#include "tbb/parallel_for.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -152,8 +151,10 @@ void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
 }
 
 //following functions are for drawing points
-void Galaxy::displayParticles(std::vector<ParticleData*> arr)
+void Galaxy::displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window)
 {
+	glfwMakeContextCurrent(window);
+
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -191,8 +192,10 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	glPopMatrix();
 }
 
-void Galaxy::displayParticles2(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2)
+void Galaxy::displayParticles2(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2, GLFWwindow* window)
 {
+	glfwMakeContextCurrent(window);
+
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -302,6 +305,26 @@ double Galaxy::clockToMilliseconds(clock_t ticks) {
 	return (ticks / (double)CLOCKS_PER_SEC)*1000.0;
 }
 
+void Galaxy::force_reset(Vector2D* forces, unsigned int max)
+{
+	for (int i = 0; i < max; i++)
+		forces[i].reset();
+}
+
+void Galaxy::calc_force_galaxy(QuadNode* root, unsigned int max, std::vector<ParticleData*> allParticles, Vector2D forces1[] )
+{
+	for (int i = 0; i < max; i++)
+		root->calcForce(*(allParticles[i]), (forces1[i]));
+}
+
+void Galaxy::copy_particles(Vector2D h_particles[], unsigned int max, std::vector<ParticleData*> allParticles)
+{
+	for (unsigned int i = 0; i < max; i++)
+		h_particles[i] = *(allParticles[i])->xy;
+
+}
+
+
 int Galaxy::running_display()
 {
 	std::cout << "running display mode" << std::endl;
@@ -320,7 +343,6 @@ int Galaxy::running_display()
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent(window);
 
 	size_t max = NUMBER_PARTICLES;
 	Vector2D forces1[320];
@@ -354,33 +376,23 @@ int Galaxy::running_display()
 		/* serial build tree */
 		root->buildTree(allParticles, NUMBER_PARTICLES);
 		/* display */
-		this->displayParticles(allParticles);
-	
-		//std::thread th_display( &Galaxy::displayParticles, this );
-		//std::thread th_display( &Galaxy::displayParticles, this, allParticles );
-	
+		this->displayParticles(allParticles, window);
+
 		//displayQuadrant(*root);
 
 
 		/* data parallelism, force calcs */ 
-		root->computeMassDistribution();
-		//std::thread th_compute ( &QuadNode::computeMassDistribution, root );
-	//	root->computeMassDistribution_iterative();
+		std::thread th_compute ( &QuadNode::computeMassDistribution, root );
+		std::thread th_reset(&Galaxy::force_reset, this, std::ref(forces1), std::ref(max));
 
+		th_compute.join();
+		th_reset.join();
 
-		//th_display.join();
-		//th_compute.join();
-
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			root->calcForce(*(allParticles[i]),  (forces1[i]) );	
-			
-		});
+		std::thread th_calc(&Galaxy::calc_force_galaxy, this, std::ref(root), std::ref(max), std::ref(allParticles), std::ref(forces1));
+		std::thread th_copy(&Galaxy::copy_particles, this, h_particles, max, allParticles);
 		
-		for (unsigned int i = 0; i < max; i++)
-		{
-			h_particles[i] = *(allParticles[i])->xy;
-		}
-
+		th_calc.join();
+		th_copy.join();
 
 		
 		if (cudaMalloc(&d_force, sizeof(Vector2D)*max) != cudaSuccess)
@@ -431,7 +443,6 @@ int Galaxy::running_display()
 		
 
 
-	//tbb::parallel_for(size_t(1), max, [&](size_t i) {	allParticles[i]->calcDistance( *forces1[i] );	});
 		calcDistance_GPU<<<((max / 1024 )+1), 1024>>>(d_force, d_particles, d_results, max);
 
 
@@ -448,12 +459,8 @@ int Galaxy::running_display()
 		
 		for (unsigned int i = 0; i < max; i++)		*(allParticles[i])->xy = h_results[i];
 
-	//	allParticles[0]->calcDistance(forces1[0]);
 
-		for (unsigned int i = 0; i < max; i++)
-		{
-			forces1[i].reset();
-		}
+
 		cudaFree(d_force);
 		cudaFree(d_results);
 		cudaFree(d_particles);
@@ -502,14 +509,13 @@ int Galaxy::two_running_display( Galaxy& second)
 		std::cout << "Error Initializing GLFW" << std::endl;
 		return -1;
 	}
-	window = glfwCreateWindow(750, 750, "Barnes-Hut Tree: Single Galaxy", NULL, NULL);
+	window = glfwCreateWindow(750, 750, "Barnes-Hut Tree: Two Galaxies", NULL, NULL);
 	if (!window)
 	{
 		std::cout << "Error creating window" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent(window);
 
 	size_t max = NUMBER_PARTICLES;
 	Vector2D forces1[320];
@@ -543,37 +549,25 @@ int Galaxy::two_running_display( Galaxy& second)
 		root->buildTree(allParticles, NUMBER_PARTICLES);
 		/* display */
 
-		displayParticles2(allParticles, second.allParticles);
-
+		displayParticles2(allParticles, second.allParticles, window);
+		
 		//displayQuadrant(*root);
 
 
 		/* data parallelism, force calcs */
-		root->computeMassDistribution();
-		//	root->computeMassDistribution_iterative();
 
-		/*
-		tbb::parallel_for(size_t(1), max, [&](size_t i) 
-		{
-			root->calcForce(*(allParticles[i]),  (forces[i]));
-			allParticles[i]->calcDistance(forces[i]);
-		});
 
-		//do center last
-		root->calcForce(*(allParticles[0]),  (forces[0]));
-		allParticles[0]->calcDistance(forces[0]);
+		std::thread th_compute(&QuadNode::computeMassDistribution, root);
+		std::thread th_reset(&Galaxy::force_reset, this, std::ref(forces1), std::ref(max));
 
-		*/
+		th_compute.join();
+		th_reset.join();
 
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			root->calcForce(*(allParticles[i]), (forces1[i]));
+		std::thread th_calc(&Galaxy::calc_force_galaxy, this, std::ref(root), std::ref(max), std::ref(allParticles), std::ref(forces1));
+		std::thread th_copy(&Galaxy::copy_particles, this, h_particles, max, allParticles);
 
-		});
-
-		for (unsigned int i = 0; i < max; i++)
-		{
-			h_particles[i] = *(allParticles[i])->xy;
-		}
+		th_calc.join();
+		th_copy.join();
 
 
 
@@ -626,7 +620,7 @@ int Galaxy::two_running_display( Galaxy& second)
 
 
 		//tbb::parallel_for(size_t(1), max, [&](size_t i) {	allParticles[i]->calcDistance( *forces1[i] );	});
-		calcDistance_GPU << <((max / 1024) + 1), 1024 >> >(d_force, d_particles, d_results, max);
+		calcDistance_GPU <<<((max / 1024) + 1), 1024 >>>(d_force, d_particles, d_results, max);
 
 
 
