@@ -7,6 +7,7 @@
 
 
 
+
 /*
 This holds info about each particle's X&Y and their mass
 */
@@ -32,7 +33,10 @@ public:
 		int start, int end, std::vector<ParticleData*> &arr,
 		double _centerMass, double vel_x, double vel_y);
 
+	//__global__ void calcDistance_CUDA(Vector2D* forces, Vector2D* particles, int count);
+
 
 	Vector2D* xy;
 	double mState;
 };
+

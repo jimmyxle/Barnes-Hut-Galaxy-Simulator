@@ -6,6 +6,8 @@
 #include "Tree.h"
 #include <Windows.h>
 
+
+
 class Galaxy
 {
 public:
@@ -13,8 +15,8 @@ public:
 	Galaxy(double x, double y, double _centerMass, int _NUM_P,
 		double vel_x, double vel_y, double radius);
 	~Galaxy();
-	void displayParticles(std::vector<ParticleData*> arr);
-	void displayParticles(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2);
+	void displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window);
+	void displayParticles2(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2, GLFWwindow* window);
 
 	void recursiveBoxes(QuadNode& qt, double factor);
 	void displayQuadrant(QuadNode& quad);
@@ -23,9 +25,15 @@ public:
 	int running_display();
 	int two_running_display(Galaxy& second);
 
+	void force_reset(Vector2D* forces, unsigned int max);
+
+	void calc_force_galaxy(QuadNode* root, unsigned int max, std::vector<ParticleData*> allParticles, Vector2D forces1[]);
+	void Galaxy::copy_particles(Vector2D h_particles[], unsigned int max, std::vector<ParticleData*> allParticles);
+	
 	void add_galaxy(Galaxy& galaxy, double vel_x, double vel_y);
 	double clockToMilliseconds(clock_t ticks);
 	static std::vector<ParticleData*> renegades;
+
 
 private:
 	ParticleData particle; 

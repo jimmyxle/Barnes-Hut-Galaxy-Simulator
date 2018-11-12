@@ -8,6 +8,8 @@
 #include "tbb/parallel_for.h"
 #include "tbb/task_group.h"
 
+#include <stack>
+
 /*
 static/global variables go here 
 */
@@ -334,6 +336,66 @@ void QuadNode::computeMassDistribution()
 	}
 }
 
+void QuadNode::computeMassDistribution_iterative()
+{
+	if (this == nullptr)
+		return;
+	const unsigned int MAX = 2000;
+	std::stack<QuadNode*> stk1[MAX];
+	std::stack<QuadNode*> stk2[MAX];
+	QuadNode* ptr = this;
+	QuadNode* temp = nullptr;
+	stk1->push(ptr);
+
+	//stk->push(ptr);
+	while (!stk1->empty())
+	{
+		//pop an tem from stk1 and push to stk2
+		temp = stk1->top();
+		stk1->pop();
+		stk2->push(temp);
+		//push children left -> right
+
+		if (temp->nodeArr.size() > 0)
+		{
+			for (int i = 0; i < 4; i++)
+				stk1->push(temp->nodeArr[i]);
+		}
+	}
+
+	//std::cout << "size of stk2:" << stk2->size() << "\n";
+	while (!stk2->empty())
+	{
+		temp = stk2->top();
+		stk2->pop();
+		if (temp->numParticles == 1)
+		{
+			assert(temp->particle);
+			temp->COM.x = temp->particle->xy->x;
+			temp->COM.y = temp->particle->xy->y;
+			temp->totalMass = temp->particle->mState;
+		}
+		else
+		{
+			temp->COM.x = 0;
+			temp->COM.y = 0;
+			temp->totalMass = 0;
+
+			if (temp->nodeArr.size() > 0)
+			{
+				for (int i = 0; i < 4; i++)
+				{
+					temp->COM.x += temp->nodeArr[i]->COM.x * temp->nodeArr[i]->totalMass;
+					temp->COM.y += temp->nodeArr[i]->COM.y * temp->nodeArr[i]->totalMass;
+					temp->totalMass += temp->nodeArr[i]->totalMass;
+				}
+				temp->COM.x /= temp->totalMass;
+				temp->COM.y /= temp->totalMass;
+			}
+		}
+	}
+}
+
 void QuadNode::calcForce(ParticleData& _particle, Vector2D &forces)
 {
 	Vector2D force1 = this->calcForceTree(_particle);
@@ -347,8 +409,10 @@ void QuadNode::calcForce(ParticleData& _particle, Vector2D &forces)
 			force1.y += force4.y * FACTOR;
 		}
 	}
-	forces.x += force1.x;
-	forces.y += force1.y;
+
+
+	forces.x += force1.x/_particle.mState;
+	forces.y += force1.y/_particle.mState;
 }
 
 Vector2D QuadNode::calcForceTree(ParticleData& _particle)
@@ -432,9 +496,6 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 		//add no force if two particles are too close together
 		force3.x = force3.y = 0;
 	}
-
-
-
 	return force3;
 }
 
@@ -455,7 +516,7 @@ void QuadNode::buildTree(std::vector<ParticleData*> &arr, int NUMBER_PARTICLES)
 		ss << "empty list";
 		throw std::runtime_error(ss.str());
 	}
-	for (int i = 0; i < arr.size(); i++)
+	for (unsigned int i = 0; i < arr.size(); i++)
 		insert(*arr[i]);
 }
 

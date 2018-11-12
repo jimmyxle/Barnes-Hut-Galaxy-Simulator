@@ -1,13 +1,96 @@
 #include "Galaxy.h"
 #include <ctime>
-#include "tbb/parallel_for.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <sstream>
 
+#include <thread>
 
 
+__global__ void calcDistance_GPU(Vector2D* forces,Vector2D* particles, Vector2D* results,  int count)
+{
+	if (count <= 1) return;
+
+	int idx = blockIdx.x*blockDim.x + threadIdx.x;
+
+	//std::cout <<"idx: "<< idx <<"\n";
+
+	if (idx < count)
+	{
+		Vector2D& thisForce = forces[idx];
+		Vector2D& thisParticle = particles[idx];
+
+			//timestep per calculation
+			double TIME = 0.3;
+			
+				//prevents NaN problems
+			
+			if (thisForce.x != thisForce.x)
+				thisForce.x = 0;
+
+			if (thisForce.y != thisForce.y)
+				thisForce.y = 0;
+			
+
+			double acc_x = thisForce.x;
+			double acc_y = thisForce.y;
+			//prevents points from accelerating too far from the center
+			double max = 1.0 / 25;
+			if (acc_x >= max)
+				acc_x = max;
+			if (acc_x < -max)
+				acc_x = -max;
+
+			if (acc_y >= max)
+				acc_y = max;
+			if (acc_y < -max)
+				acc_y = -max;
+			
+
+			//velocities
+
+			thisParticle.vx += acc_x * TIME;
+			thisParticle.vy += acc_y * TIME;
+
+			//positions
+			thisParticle.x += thisParticle.vx * TIME;
+			thisParticle.y += thisParticle.vy * TIME;
+
+
+			//bounce particles off the borders
+			if (thisParticle.x >= 0.99)
+			{
+				thisParticle.x = 0.99;
+				thisParticle.vx *= -0.5;
+			}
+			if (thisParticle.x <= -0.99)
+			{
+				thisParticle.x = -0.99;
+				thisParticle.vx *= -0.5;
+			}
+			if (thisParticle.y >= 0.99)
+			{
+				thisParticle.y = 0.99;
+				thisParticle.vy *= -0.5;
+			}
+			if (thisParticle.y <= -0.99)
+			{
+				thisParticle.y = -0.99;
+				thisParticle.vy *= -0.5;
+			}
+
+			results[idx].x = thisParticle.x;
+			results[idx].y = thisParticle.y;
+			results[idx].vx = thisParticle.vx;
+			results[idx].vy = thisParticle.vy;
+
+
+		
+	}
+	__syncthreads();
+
+}
 
 
 
@@ -68,8 +151,10 @@ void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
 }
 
 //following functions are for drawing points
-void Galaxy::displayParticles(std::vector<ParticleData*> arr) 
+void Galaxy::displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window)
 {
+	glfwMakeContextCurrent(window);
+
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -78,8 +163,11 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	glPointSize(4);
 	glBegin(GL_POINTS);
 
+	
+
 	int SIZE = arr.size();
 	bool init = true;
+
 	do
 	{
 		double x = (arr[0])->xy->x;
@@ -104,8 +192,10 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr)
 	glPopMatrix();
 }
 
-void Galaxy::displayParticles(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2)
+void Galaxy::displayParticles2(std::vector<ParticleData*> arr1, std::vector<ParticleData*> arr2, GLFWwindow* window)
 {
+	glfwMakeContextCurrent(window);
+
 	glClearColor(0, 0, 0, 0);
 	//clear color and depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -211,6 +301,30 @@ void Galaxy::displayQuadrant(QuadNode& quad, QuadNode& second)
 	glPopMatrix();
 }
 
+double Galaxy::clockToMilliseconds(clock_t ticks) {
+	return (ticks / (double)CLOCKS_PER_SEC)*1000.0;
+}
+
+void Galaxy::force_reset(Vector2D* forces, unsigned int max)
+{
+	for (int i = 0; i < max; i++)
+		forces[i].reset();
+}
+
+void Galaxy::calc_force_galaxy(QuadNode* root, unsigned int max, std::vector<ParticleData*> allParticles, Vector2D forces1[] )
+{
+	for (int i = 0; i < max; i++)
+		root->calcForce(*(allParticles[i]), (forces1[i]));
+}
+
+void Galaxy::copy_particles(Vector2D h_particles[], unsigned int max, std::vector<ParticleData*> allParticles)
+{
+	for (unsigned int i = 0; i < max; i++)
+		h_particles[i] = *(allParticles[i])->xy;
+
+}
+
+
 int Galaxy::running_display()
 {
 	std::cout << "running display mode" << std::endl;
@@ -229,16 +343,24 @@ int Galaxy::running_display()
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent(window);
-
-	std::vector<Vector2D> forces1(NUMBER_PARTICLES);
 
 	size_t max = NUMBER_PARTICLES;
+	Vector2D forces1[320];
 
-	clock_t deltaTime = 0;
+
+	Vector2D *d_force;
+
+	Vector2D *d_results;
+	Vector2D *h_results = new Vector2D[max];
+
+	Vector2D *d_particles;
+	Vector2D *h_particles = new Vector2D[max];
+
+
+
+	double deltaTime = 0;
 	unsigned int frames = 0;
-	double  frameRate = 30;
-	double  averageFrameTimeMilliseconds = 33.333;
+
 
 	std::clock_t end;
 	std::clock_t begin;
@@ -249,118 +371,104 @@ int Galaxy::running_display()
 	{
 		begin = clock();
 		start = begin;
+		
 
-
-		//task parallel
+		/* serial build tree */
 		root->buildTree(allParticles, NUMBER_PARTICLES);
+		/* display */
+		this->displayParticles(allParticles, window);
 
-		//data parallelism
-		root->computeMassDistribution();
-
-		//uncomment these to show particles/quadrants
-		displayParticles(allParticles);
 		//displayQuadrant(*root);
 
-		for (int i = 0; i < max; i++)
-		{
-			forces1[i].reset();
-		}
 
-		/**/
-		//calc forces 
-		//data parallel
+		/* data parallelism, force calcs */ 
+		std::thread th_compute ( &QuadNode::computeMassDistribution, root );
+		std::thread th_reset(&Galaxy::force_reset, this, std::ref(forces1), std::ref(max));
 
-		tbb::parallel_for(size_t(0), max, [&](size_t i) {
-			root->calcForce(*(allParticles[i]),  (forces1[i]) );	
-		});
+		th_compute.join();
+		th_reset.join();
 
-		/*here we try to do cuda first*/
+		std::thread th_calc(&Galaxy::calc_force_galaxy, this, std::ref(root), std::ref(max), std::ref(allParticles), std::ref(forces1));
+		std::thread th_copy(&Galaxy::copy_particles, this, h_particles, max, allParticles);
+		
+		th_calc.join();
+		th_copy.join();
 
-		//make array of forces
-		Vector2D *h_force = new Vector2D[max];
-		Vector2D *d_force;
-
-		Vector2D *h_particles = new Vector2D[max];
-		Vector2D *d_particles;
-
-		for (int i = 0; i < max; i++)
-		{
-			h_force[i] = forces1[i];
-			h_particles[i] = *(allParticles[i])->xy;
-		}
 		
 		if (cudaMalloc(&d_force, sizeof(Vector2D)*max) != cudaSuccess)
 		{
-			delete[] d_force;
-			std::stringstream ss;
-			ss << "Can't malloc d_force_x.";
-			throw std::runtime_error(ss.str());
-		}
-		if (cudaMalloc(&d_particles, sizeof(Vector2D)*max) != cudaSuccess)
-		{
-			delete[] d_force;
 			std::stringstream ss;
 			ss << "Can't malloc d_force_x.";
 			throw std::runtime_error(ss.str());
 		}
 
-		if (cudaMemcpy(d_force, h_force, sizeof(Vector2D)*max, cudaMemcpyHostToDevice) != cudaSuccess)
+		if (cudaMemcpy(d_force, forces1, sizeof(Vector2D)*max, cudaMemcpyHostToDevice) != cudaSuccess)
 		{
 			cudaFree(d_force);
-			delete[] h_force;
-			cudaFree(d_particles);
-			delete[] h_particles;
 			std::stringstream ss;
 			ss << "Can't copy  host force_x.";
 			throw std::runtime_error(ss.str());
 		}
 
+		
+		if (cudaMalloc(&d_particles, sizeof(Vector2D)*max) != cudaSuccess)
+		{
+			cudaFree(d_force);
+			std::stringstream ss;
+			ss << "Can't malloc d_force_x.";
+			throw std::runtime_error(ss.str());
+		}
+
+
+
+		if (cudaMalloc(&d_results, sizeof(Vector2D)*max) != cudaSuccess)
+		{
+			cudaFree(d_force);
+			cudaFree(d_particles);
+			std::stringstream ss;
+			ss << "Can't malloc d_force_x.";
+			throw std::runtime_error(ss.str());
+		}
+
+		
 		if (cudaMemcpy(d_particles, h_particles, sizeof(Vector2D)*max, cudaMemcpyHostToDevice) != cudaSuccess)
 		{
 			cudaFree(d_force);
-			delete[] h_force;
 			cudaFree(d_particles);
-			delete[] h_particles;
+			cudaFree(d_results);
 			std::stringstream ss;
-			ss << "Can't copy  host force_x.";
+			ss << "Can't copy  host particles.";
 			throw std::runtime_error(ss.str());
 		}
+		
 
-		 //kernel 
+
+		calcDistance_GPU<<<((max / 1024 )+1), 1024>>>(d_force, d_particles, d_results, max);
 
 
-		if (cudaMemcpy(h_particles, d_particles, sizeof(Vector2D)*max, cudaMemcpyDeviceToHost) != cudaSuccess)
+		
+		if (cudaMemcpy(h_results , d_results, sizeof(Vector2D)*max, cudaMemcpyDeviceToHost) != cudaSuccess)
 		{
 			cudaFree(d_force);
-			delete[] h_force;
 			cudaFree(d_particles);
-			delete[] h_particles;
+			cudaFree(d_results);
 			std::stringstream ss;
 			ss << "Can't copy device d_force_x.";
 			throw std::runtime_error(ss.str());
 		}
+		
+		for (unsigned int i = 0; i < max; i++)		*(allParticles[i])->xy = h_results[i];
 
-		delete[] h_force;
+
+
 		cudaFree(d_force);
+		cudaFree(d_results);
 		cudaFree(d_particles);
-		delete[] h_particles;
 
-		for (int i = 0; i < max; i++)
-		{
-			*(allParticles[i])->xy = h_particles[i];
-		}
-
-
-
-		/*
-		tbb::parallel_for(size_t(1), max, [&](size_t i) {
-			allParticles[i]->calcDistance(forces1[i]);
-		});
-		/**/
-		//do center last
-		allParticles[0]->calcDistance(forces1[0]);
 
 		/* end calc forces*/
+
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
@@ -370,26 +478,28 @@ int Galaxy::running_display()
 
 		frames++;
 
-		if (clockToMilliseconds(deltaTime) > 1000.0) { //every second
-			frameRate = (double)frames*0.5 + frameRate * 0.5; //more stable
+		if (clockToMilliseconds(deltaTime) > 1000.0) 
+		{ //every second
+			std::cout << "\tfps:\t[" << frames << "]" << std::endl;
 			frames = 0;
-			deltaTime -= CLOCKS_PER_SEC;
-			averageFrameTimeMilliseconds = 1000.0 / (frameRate == 0 ? 0.001 : frameRate);
+			deltaTime = 0 ;
 
-			std::cout << "\tFrameTime was:\t[" << averageFrameTimeMilliseconds <<"]"<< std::endl;
-			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
 		}
-
+		
 	}
+	/* when you close the window, this frees the gpu memory */
+	cudaFree(d_force);
+	cudaFree(d_particles);
+	cudaFree(d_results);
+
 	glfwTerminate();
+	return 0;
 }
 
 
 
-
-int Galaxy::two_running_display(Galaxy& second)
+int Galaxy::two_running_display( Galaxy& second)
 {
-
 	std::cout << "running display mode" << std::endl;
 	Vector2D target;
 
@@ -406,81 +516,164 @@ int Galaxy::two_running_display(Galaxy& second)
 		glfwTerminate();
 		return -1;
 	}
-	glfwMakeContextCurrent(window);
 
-	std::vector<Vector2D> forces(NUMBER_PARTICLES);
 	size_t max = NUMBER_PARTICLES;
+	Vector2D forces1[320];
 
-	clock_t deltaTime = 0;
+
+	Vector2D *d_force;
+
+	Vector2D *d_results;
+	Vector2D *h_results = new Vector2D[max];
+
+	Vector2D *d_particles;
+	Vector2D *h_particles = new Vector2D[max];
+
+
+
+	double deltaTime = 0;
 	unsigned int frames = 0;
 
 
 	std::clock_t end;
+	std::clock_t begin;
 	std::clock_t start;
 	double time;
 
-
 	while (!glfwWindowShouldClose(window))
 	{
-		start = clock();
+		begin = clock();
+		start = begin;
 
-		//task parallel
+		/* serial build tree */
 		root->buildTree(allParticles, NUMBER_PARTICLES);
+		/* display */
 
-		//data parallel
-		root->computeMassDistribution();
-
-		displayParticles(allParticles, second.allParticles);
-		//displayQuadrant(*root, *second.root);
-
-		size_t max = allParticles.size();
+		displayParticles2(allParticles, second.allParticles, window);
+		
+		//displayQuadrant(*root);
 
 
-		for (int i = 0; i < max; i++)
+		/* data parallelism, force calcs */
+
+
+		std::thread th_compute(&QuadNode::computeMassDistribution, root);
+		std::thread th_reset(&Galaxy::force_reset, this, std::ref(forces1), std::ref(max));
+
+		th_compute.join();
+		th_reset.join();
+
+		std::thread th_calc(&Galaxy::calc_force_galaxy, this, std::ref(root), std::ref(max), std::ref(allParticles), std::ref(forces1));
+		std::thread th_copy(&Galaxy::copy_particles, this, h_particles, max, allParticles);
+
+		th_calc.join();
+		th_copy.join();
+
+
+
+		if (cudaMalloc(&d_force, sizeof(Vector2D)*max) != cudaSuccess)
 		{
-			forces[i].reset();
+			std::stringstream ss;
+			ss << "Can't malloc d_force_x.";
+			throw std::runtime_error(ss.str());
 		}
 
-		//data parallel 
-
-		tbb::parallel_for(size_t(1), max, [&](size_t i) 
+		if (cudaMemcpy(d_force, forces1, sizeof(Vector2D)*max, cudaMemcpyHostToDevice) != cudaSuccess)
 		{
-			root->calcForce(*(allParticles[i]),  (forces[i]));
-			allParticles[i]->calcDistance(forces[i]);
-		});
+			cudaFree(d_force);
+			std::stringstream ss;
+			ss << "Can't copy  host force_x.";
+			throw std::runtime_error(ss.str());
+		}
 
-		//do center last
-		root->calcForce(*(allParticles[0]),  (forces[0]));
-		allParticles[0]->calcDistance(forces[0]);
+
+		if (cudaMalloc(&d_particles, sizeof(Vector2D)*max) != cudaSuccess)
+		{
+			cudaFree(d_force);
+			std::stringstream ss;
+			ss << "Can't malloc d_force_x.";
+			throw std::runtime_error(ss.str());
+		}
+
+
+
+		if (cudaMalloc(&d_results, sizeof(Vector2D)*max) != cudaSuccess)
+		{
+			cudaFree(d_force);
+			cudaFree(d_particles);
+			std::stringstream ss;
+			ss << "Can't malloc d_force_x.";
+			throw std::runtime_error(ss.str());
+		}
+
+
+		if (cudaMemcpy(d_particles, h_particles, sizeof(Vector2D)*max, cudaMemcpyHostToDevice) != cudaSuccess)
+		{
+			cudaFree(d_force);
+			cudaFree(d_particles);
+			cudaFree(d_results);
+			std::stringstream ss;
+			ss << "Can't copy  host particles.";
+			throw std::runtime_error(ss.str());
+		}
+
+
+
+		//tbb::parallel_for(size_t(1), max, [&](size_t i) {	allParticles[i]->calcDistance( *forces1[i] );	});
+		calcDistance_GPU <<<((max / 1024) + 1), 1024 >>>(d_force, d_particles, d_results, max);
+
+
+
+		if (cudaMemcpy(h_results, d_results, sizeof(Vector2D)*max, cudaMemcpyDeviceToHost) != cudaSuccess)
+		{
+			cudaFree(d_force);
+			cudaFree(d_particles);
+			cudaFree(d_results);
+			std::stringstream ss;
+			ss << "Can't copy device d_force_x.";
+			throw std::runtime_error(ss.str());
+		}
+
+		for (unsigned int i = 0; i < max; i++)		*(allParticles[i])->xy = h_results[i];
+
+		//	allParticles[0]->calcDistance(forces1[0]);
+
+		for (unsigned int i = 0; i < max; i++)
+		{
+			forces1[i].reset();
+		}
+		cudaFree(d_force);
+		cudaFree(d_results);
+		cudaFree(d_particles);
+
+
+		/* end calc forces*/
+
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
-		end = clock();;
+		end = clock();
 		time = (end - start);
 		deltaTime += time;
 
 		frames++;
 
-		if ( (deltaTime) >= 1.0) { //every second
-			std::cout << 1000.0 / double(frames) << std::endl;
-
-			double fps = double(frames) / deltaTime;
-
-			std::cout << "\t fps was:\t[" << fps << "]" << std::endl;
-
+		if (clockToMilliseconds(deltaTime) > 1000.0)
+		{ //every second
+			std::cout << "\tfps:\t[" << frames << "]" << std::endl;
 			frames = 0;
-
-			std::cout << "time per cycle: \t[" << time << "]" << std::endl;
+			deltaTime = 0;
 
 		}
 
 	}
+	/* when you close the window, this frees the gpu memory */
+	cudaFree(d_force);
+	cudaFree(d_particles);
+	cudaFree(d_results);
+
 	glfwTerminate();
+	return 0;
 }
 
-/**/
-double Galaxy::clockToMilliseconds(clock_t ticks) {
-	return (ticks / (double)CLOCKS_PER_SEC)*1000.0;
-}
-/**/
