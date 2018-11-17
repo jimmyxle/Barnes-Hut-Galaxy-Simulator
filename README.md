@@ -1,3 +1,10 @@
+Latest:
+So got to set up openCL1.2 on visualStudio 2017.
+linked lib, got my device information, ran .cl files
+uploaded samples from https://www.youtube.com/watch?v=YU_pRT-Be0c&list=PLzy5q1NUJKCJocUKsRxZ0IPz29p38xeM-&index=1
+we went over reading a char, doing array manipulation, how to use memory fences for local mem.
+could also do fences for global and gotta learn about cl_int4 (faster ?)
+
 add these to cuda patch
 /*
 std::thread cmd_th(&QuadNode::computeMassDistribution, root);
