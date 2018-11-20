@@ -4,9 +4,7 @@
 #include <ctime>
 #include <sstream>
 
-//#include <cuda.h>
-//#include <cuda_runtime.h>
-//#include <device_launch_parameters.h>
+
 
 
 const double PI = 3.1415926535897;

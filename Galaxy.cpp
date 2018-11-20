@@ -1,6 +1,5 @@
 #include "Galaxy.h"
 #include <ctime>
-//include "tbb/parallel_for.h"
 #include <thread>
 
 
@@ -259,10 +258,10 @@ int Galaxy::running_display()
 		depth = root->buildTree(allParticles, NUMBER_PARTICLES);
 		//data parallelism
 		std::thread cmd_th(&QuadNode::computeMassDistribution, root);
-		std::thread display_th( &Galaxy::displayParticles, this,std::ref(allParticles), std::ref(window));
+		displayParticles(allParticles, window);
 
 		cmd_th.join();
-		display_th.join();
+		//display_th.join();
 
 
 		for (unsigned int i = 0; i < max; i++)
@@ -353,11 +352,10 @@ int Galaxy::two_running_display(Galaxy& second)
 		//data parallel
 
 		std::thread cmd_th(&QuadNode::computeMassDistribution, root);
-		std::thread display_th(&Galaxy::displayParticles2, this, 
-			std::ref(allParticles), std::ref(second.allParticles), std::ref(window));
+		
+		displayParticles2(allParticles, second.allParticles, window);
 
 		cmd_th.join();
-		display_th.join();
 
 
 		//displayParticles2(allParticles, second.allParticles);

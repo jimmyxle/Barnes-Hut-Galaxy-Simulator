@@ -6,8 +6,7 @@
 #include "Galaxy.h"
 #include <assert.h>
 
-//#include "tbb/parallel_for.h"
-//#include "tbb/task_group.h"
+
 
 #include <stack>
 
