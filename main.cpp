@@ -7,17 +7,17 @@ int main()
 	std::cout << "Start" << std::endl;
 	//-----------------------
 	//set # planets per galaxy
-	int NUM_P = 10;
+	int NUM_P = 1024;
 	//mass of center particle of each
-	double solar_mass = 1 * pow(10, 7);
-	double solar_mass_2 = 0.5 * pow(10, 7);
+	float solar_mass = 1e7f;
+	float solar_mass_2 = 0.5e7f;
 
 	//initial velocity , x variable
-	double initial_x = 0.001;
-	//double initial_y = 0.005;
+	float initial_x = 0.001f;
+	//float initial_y = 0.005;
 
 
-	Galaxy* g1 = new Galaxy(0.5, 0.5, solar_mass , NUM_P, -initial_x, 0, 0.2);
+	Galaxy* g1 = new Galaxy(0.5f, 0.5f, solar_mass , NUM_P, -initial_x, 0, 0.2f);
 
 	Galaxy* g2 = nullptr;
 

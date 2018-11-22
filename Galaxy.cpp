@@ -1,7 +1,5 @@
 #include "Galaxy.h"
-#include <ctime>
-#include <thread>
-#include "OpenCLHelper.h"
+
 
 
 
@@ -19,8 +17,8 @@ Galaxy::Galaxy()
 	depth = 0;
 }
 
-Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P,
-	double vel_x, double vel_y, double radius)
+Galaxy::Galaxy(float _x, float _y, float _centerMass, int _NUM_P,
+	float vel_x, float vel_y, float radius)
 {
 	NUMBER_PARTICLES = _NUM_P;
 
@@ -32,7 +30,7 @@ Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P,
 	y = _y;
 	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, radius,
 		_centerMass, vel_x, vel_y);
-	double boxSize = 3;
+	float boxSize = 3;
 	max = new Vector2D(boxSize, -boxSize, 0, 0);
 	min = new Vector2D(-boxSize, boxSize, 0, 0);
 
@@ -54,7 +52,7 @@ Galaxy::~Galaxy()
 /*
 this adds ones planets to the other list and change num planets var in main
 */
-void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
+void Galaxy::add_galaxy(Galaxy& galaxy, float vel_x, float vel_y)
 {
 	for (auto it = galaxy.allParticles.begin(); it != galaxy.allParticles.end(); it++)
 	{
@@ -80,8 +78,8 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window
 	bool init = true;
 	do
 	{
-		double x = (arr[0])->xy->x;
-		double y = (arr[0])->xy->y;
+		float x = (arr[0])->xy->x;
+		float y = (arr[0])->xy->y;
 		glVertex2d(x, y);
 		init = !init;
 	} while (init);
@@ -93,8 +91,8 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window
 
 	for (int i = 1; i < SIZE; i++)
 	{
-		double x = (arr[i])->xy->x;
-		double y = (arr[i])->xy->y;
+		float x = (arr[i])->xy->x;
+		float y = (arr[i])->xy->y;
 		glVertex2d(x, y);
 	}
 
@@ -120,8 +118,8 @@ void Galaxy::displayParticles2(std::vector<ParticleData*> arr1,
 	{
 		glColor3f(255, 0, 0);
 
-		double x = (arr1[0])->xy->x;
-		double y = (arr1[0])->xy->y;
+		float x = (arr1[0])->xy->x;
+		float y = (arr1[0])->xy->y;
 		glVertex2d(x, y);
 
 		x = (arr1[SIZE / 2])->xy->x;
@@ -140,8 +138,8 @@ void Galaxy::displayParticles2(std::vector<ParticleData*> arr1,
 	glColor3f(0, 255, 0);
 	for (int i = 1; i < SIZE / 2; i++)
 	{
-		double x = (arr1[i])->xy->x;
-		double y = (arr1[i])->xy->y;
+		float x = (arr1[i])->xy->x;
+		float y = (arr1[i])->xy->y;
 		glVertex2d(x, y);
 	}
 
@@ -149,8 +147,8 @@ void Galaxy::displayParticles2(std::vector<ParticleData*> arr1,
 
 	for (int i = SIZE / 2 + 1; i < SIZE; i++)
 	{
-		double x = (arr1[i])->xy->x;
-		double y = (arr1[i])->xy->y;
+		float x = (arr1[i])->xy->x;
+		float y = (arr1[i])->xy->y;
 		glVertex2d(x, y);
 	}
 	glEnd();
@@ -158,7 +156,7 @@ void Galaxy::displayParticles2(std::vector<ParticleData*> arr1,
 }
 
 
-void Galaxy::recursiveBoxes(QuadNode& qt, double factor)
+void Galaxy::recursiveBoxes(QuadNode& qt, float factor)
 {
 	glBegin(GL_POLYGON);
 	glVertex2d(factor*qt.getVector(0).x, factor*qt.getVector(0).y);
@@ -212,8 +210,8 @@ void Galaxy::displayQuadrant(QuadNode& quad, QuadNode& second)
 }
 
 
-double Galaxy::clockToMilliseconds(clock_t ticks) {
-	return (ticks / (double)CLOCKS_PER_SEC)*1000.0;
+float Galaxy::clockToMilliseconds(clock_t ticks) {
+	return (ticks / (float)CLOCKS_PER_SEC)*1000.0f;
 }
 
 int Galaxy::running_display()
@@ -239,13 +237,21 @@ int Galaxy::running_display()
 
 	/* arrays */
 	std::vector<Vector2D> forces1(NUMBER_PARTICLES);
-	std::vector<Vector2D> positions1(NUMBER_PARTICLES);
+
+	std::vector<cl_float4> positions(NUMBER_PARTICLES);
+	//std::vector<cl_float2> velocities(NUMBER_PARTICLES);
+
+
+	std::vector<cl_float2> forces_copy(NUMBER_PARTICLES);
+
 
 	/* opencl context*/
-	auto program = CreateProgram("calc_dist.cl", 0); //set to 0 for cpu, set to 1 for gpu
+	auto program = CreateProgram("calc_dist.cl", 1); //set to 0 for cpu, set to 1 for gpu
 		//create context
 	auto context = program.getInfo<CL_PROGRAM_CONTEXT>();
-	auto devices = context.getInfo <CL_CONTEXT_DEVICES>();
+	auto devices = context.getInfo<CL_CONTEXT_DEVICES>();
+	//auto devic   = context.getInfo<CL_CONTEXT_DEVICES>();
+
 	_ASSERT(devices.size() > 0);
 	auto& device = devices.back();
 
@@ -269,9 +275,17 @@ int Galaxy::running_display()
 
 		//task parallel
 		depth = root->buildTree(allParticles, NUMBER_PARTICLES);
+		/*
+			x = x; y = y; vx = z; vy = w;
+		
+		*/
 		for (unsigned int i = 0; i < max; i++)
 		{
-			positions1[i] = *(allParticles[i]->xy);
+			positions[i].x = (allParticles[i]->xy->x);
+			positions[i].y = (allParticles[i]->xy->y);
+			positions[i].z = (allParticles[i]->xy->vx);
+			positions[i].w = (allParticles[i]->xy->vy);
+
 		}
 		//data parallelism
 		std::thread cmd_th(&QuadNode::computeMassDistribution, root);
@@ -286,9 +300,13 @@ int Galaxy::running_display()
 		//calc forces 
 		//data parallel
 
+	
+
 		for (unsigned int i = 0; i < max; i++)
 		{
 			root->calcForce(*(allParticles[i]), (forces1[i]));
+			forces_copy[i].x = forces1[i].x;
+			forces_copy[i].y = forces1[i].y;
 
 		}
 
@@ -298,39 +316,43 @@ int Galaxy::running_display()
 		
 		cl_int err = 0;
 
-		cl::Kernel kernel(program, "calc_dist");
+		cl::Kernel kernel(program, "calc_dist", &err);
 		auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
 
-		auto numWorkGroups = max / workGroupSize;
+	//	auto numWorkGroups = max / workGroupSize;
 
-		cl::Buffer buf_force(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(Vector2D)*max, forces1.data(), &err);
-	
-		cl::Buffer buf_pos(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(Vector2D)*max, positions1.data(), &err);
-		cl::Buffer outBuf_pos(context, CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, sizeof(Vector2D)*numWorkGroups,NULL, &err);
+		cl::Buffer buf_force(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float2)*max, forces_copy.data(), &err);
+		cl::Buffer buf_pos(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float4)*max, positions.data(), &err);
+		cl::Buffer outBuf_pos(context, CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, sizeof(cl_float4)*max, NULL, &err);
 		
 		/*
 		0. __global Vector2D* in_force
 		1. __local Vector2D* local_force
-		2. __global Vector2D* out_force
-		3. __global Vector2D* in_pos
-		4. __local Vector2D* local_pos
-		5. __global vector2D* out_pos
+		2. __global Vector2D* in_pos
+		3. __local Vector2D* local_pos
+		4. __global vector2D* out_pos
 		*/
 		err = kernel.setArg(0, buf_force);
-		kernel.setArg(1, sizeof(Vector2D)*workGroupSize, nullptr);
+		//err = kernel.setArg(1, sizeof(cl_float2)*workGroupSize, nullptr); //local for forces
+		err = kernel.setArg(1, buf_pos);
+		//err = kernel.setArg(3, sizeof(cl_float4)*workGroupSize, nullptr); //local for positions 
+		err = kernel.setArg(2, outBuf_pos);
 
-		err = kernel.setArg(2, buf_pos);
-		kernel.setArg(3, sizeof(Vector2D)*workGroupSize, nullptr);
-		err = kernel.setArg(4, outBuf_pos);
+		/*
+			cl::CommandQueue queue(context, device);
+			err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(vec.size()), cl::NDRange(workGroupSize));
 
+			err = queue.enqueueReadBuffer(outBuf, CL_TRUE, 0, sizeof(int)*outVec.size(), outVec.data());
 
-		std::vector<Vector2D> outVec(max);
+		*/
+
+		std::vector<cl_float4> outVec(max);
 
 		//create command queueue
 		cl::CommandQueue queue(context, device);
-		queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange( max ), cl::NDRange(workGroupSize));
+		err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange( max ), cl::NDRange(workGroupSize));
 
-		queue.enqueueReadBuffer(outBuf_pos, CL_TRUE, 0, sizeof(Vector2D)*outVec.size(), outVec.data());
+		err = queue.enqueueReadBuffer(outBuf_pos, CL_TRUE, 0, sizeof(cl_float4)*outVec.size(), outVec.data());
 
 		//allParticles[i]->calcDistance(forces1[i]);
 
@@ -338,7 +360,10 @@ int Galaxy::running_display()
 
 		for (unsigned int i = 0; i < max; i++)
 		{
-			*(allParticles[i]->xy) = outVec[i];
+			(allParticles[i]->xy->x) = outVec[i].x;
+			(allParticles[i]->xy->y) = outVec[i].y;
+			(allParticles[i]->xy->vx) = outVec[i].z;
+			(allParticles[i]->xy->vy) = outVec[i].w;
 		}
 
 		/* end calc forces*/

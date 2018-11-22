@@ -1,146 +1,89 @@
-__kernel void calc_dist(__global float* in_force, __local float* local_force,
- __global float* in_pos, __local float* local_pos,
-__global float* out_pos)
+__kernel void calc_dist(
+	__global float2* in_force,
+	__global float4* in_pos,
+	__global float4* out_pos)
 {
-	/*
 	size_t globalId = get_global_id(0);
-	size_t localSize = get_local_size(0);
+	out_pos[globalId].x = 0.5f;
+	out_pos[globalId].y = 0.5f;
+
 	size_t localId = get_local_id(0);
+	/*
+	
+	size_t globalId = get_global_id(0);
+	//size_t localSize = get_local_size(0);
+	//size_t localId = get_local_id(0);
 
 
-	local_force[localId] = in_force[globalId];
-	local_pos[localId] = in_pos[globalId];
+	local_force[globalId] = in_force[globalId];
+	local_pos[globalId] = in_pos[globalId];
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	//barrier(CLK_LOCAL_MEM_FENCE);
 
+	
+	//float2 force = local_force[localId];
+	//float4 position = local_pos[localId];
 
-		Vector2D force = local_force[localId];
-		Vector2D current_position = local_position[localId];
-
-		double TIME = 0.3; 
+	
 		
-			//prevents NaN problems
-			if (force.x != force.x)
-				force.x = 0;
-			
-			if (force.y != force.y)
-				force.y = 0;
+	//local_pos[localId] = calculate(force, position);
 		
 
-		double acc_x = force.x ;
-		double acc_y = force.y ;
-		//prevents points from accelerating too far from the center
-		double max = 1.0 / 25;
-		if (acc_x >= max)
-		{
-			acc_x = max;
-		}
-		if (acc_x < -max)
-		{
-			acc_x = -max;
-		}
-
-		if (acc_y >= max)
-		{
-			acc_y = max;
-		}
-		if (acc_y < -max)
-		{
-			acc_y = -max;
-		}
-
-		//velocities
-		current_position.xy->vx += acc_x * TIME;
-		current_position.xy->vy += acc_y * TIME;
-
-		//positions
-		current_position.xy->x = 0.5;
-		current_position.xy->y = -0.5;
-		
-	//	current_position.xy->x += current_position.xy->vx;
-	//	current_position.xy->y += current_position.xy->vy;
-		//bounce particles off the borders
-		if (current_position.xy->x >= 0.99)
-		{
-			current_position.xy->x = 0.99;
-			current_position.xy->vx *= -0.5;
-		}
-		if (current_position.xy->x <= -0.99)
-		{
-			current_position.xy->x = -0.99;
-			current_position.xy->vx *= -0.5;
-		}
-		if (current_position.xy->y >= 0.99)
-		{
-			current_position.xy->y = 0.99;
-			current_position.xy->vy *= -0.5;
-		}
-		if (current_position.xy->y <= -0.99)
-		{
-			current_position.xy->y = -0.99;
-			current_position.xy->vy *= -0.5;
-		}
-
-		
-		//local_position[i] = calculate(local_force[i], local_position[i]);
-		
-		barrier(CLK_LOCAL_MEM_FENCE);
+	//barrier(CLK_LOCAL_MEM_FENCE);
 	
 
-	out_force[globalId] = localData[localId];
+	//out_pos[globalId] = local_pos[localId];
 	/**/
 }
 
 
 /*
-__kernel Vector2D calculate( Vector2D force,  Vector2D position)
+__kernel void calculate( cl_float2& force,  cl_float4& position)
 {
-		Vector2D current_position = position;
 		//timestep per calculation
-		double TIME = 0.3; 
-		{
+		float TIME = 0.3f; 
+		
 			//prevents NaN problems
 			if (force.x != force.x)
 				force.x = 0;
 
 			if (force.y != force.y)
 				force.y = 0;
-		}
 
-		double acc_x = force.x ;
-		double acc_y = force.y ;
 		//prevents points from accelerating too far from the center
-		double max = 1.0 / 25;
-		if (acc_x >= max)
+		cl_float max = 1.0f / 25;
+		if(force.x >= max)
 		{
-			acc_x = max;
+			force.x = max;
 		}
-		if (acc_x < -max)
+		if (force.x < -max)
 		{
-			acc_x = -max;
+			force.x = -max;
 		}
 
-		if (acc_y >= max)
+		if (force.y >= max)
 		{
-			acc_y = max;
+			force.y = max;
 		}
-		if (acc_y < -max)
+		if (force.y < -max)
 		{
-			acc_y = -max;
+			force.y = -max;
 		}
+		
 
 		//velocities
-		current_position.xy->vx += acc_x * TIME;
-		current_position.xy->vy += acc_y * TIME;
+		//position.z += force.x * TIME;
+		//position.w += force.y * TIME;
 
 		//positions
-		current_position.xy->x = 0.5;
-		current_position.xy->y = -0.5;
+		position.x = 0.5;
+		position.y = -0.5;
 		
 	//	current_position.xy->x += current_position.xy->vx;
 	//	current_position.xy->y += current_position.xy->vy;
 
 		//bounce particles off the borders
+		
 		if (current_position.xy->x >= 0.99)
 		{
 			current_position.xy->x = 0.99;
@@ -165,4 +108,13 @@ __kernel Vector2D calculate( Vector2D force,  Vector2D position)
 		return current_postion;
 }
 
+/*
+
+__kernel void calc_dist(
+__global float2* in_force,
+__local  float2* local_force,
+__global float4* in_pos,
+__local  float4* local_pos,
+__global float4* out_pos)
+{
 */

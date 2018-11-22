@@ -7,8 +7,8 @@
 
 
 
-const double PI = 3.1415926535897;
-const double G_CONST = 6.674 * pow(10.0, -11.0);
+const float PI = 3.1415926f;
+const float G_CONST = 6.674e-11f;
 
 ParticleData::ParticleData()
 {
@@ -17,13 +17,13 @@ ParticleData::ParticleData()
 	mState = NULL;
 }
 
-ParticleData::ParticleData(double _x, double _y, double mstate)
+ParticleData::ParticleData(float _x, float _y, float mstate)
 {
 	xy = new Vector2D(_x, _y);
 	mState = mstate;
 }
 
-ParticleData::ParticleData(double _x, double _y, double mstate, double _vx, double _vy)
+ParticleData::ParticleData(float _x, float _y, float mstate, float _vx, float _vy)
 {
 	xy = new Vector2D(_x, _y, _vx, _vy);
 	mState = mstate;
@@ -59,38 +59,38 @@ void ParticleData::printParticle()
 /*
 	Random angular positions and orbital velocities
 */
-void ParticleData::createParticle(double a, double b, double radius, 
-	int start, int end, std::vector<ParticleData*> &arr, double _centerMass, 
-	double vel_x, double vel_y)
+void ParticleData::createParticle(float a, float b, float radius, 
+	int start, int end, std::vector<ParticleData*> &arr, float _centerMass, 
+	float vel_x, float vel_y)
 {
 	//add the sun
 	arr.push_back(new ParticleData(a,b, _centerMass ,vel_x,vel_y));
 
 	for (int i = 1; i < end; i++)
 	{
-		double r = 1 * radius * sqrt(rand() / (double)RAND_MAX);
-		double angle = (rand() / (double)RAND_MAX) * 2 * PI;
+		float r = 1 * radius * sqrt(rand() / (float)RAND_MAX);
+		float angle = (rand() / (float)RAND_MAX) * 2 * PI;
 
-		double x = a + r * cos(angle);
-		double y = b + r * sin(angle);
+		float x = a + r * cos(angle);
+		float y = b + r * sin(angle);
 
 		//distance between center and particle
-		double DIST = sqrt((a - x)*(a - x) + (b - y)*(b - y));
-		double orbital_vel = sqrt(G_CONST*_centerMass / DIST);
+		float DIST = sqrt((a - x)*(a - x) + (b - y)*(b - y));
+		float orbital_vel = sqrt(G_CONST*_centerMass / DIST);
 
 		//adjust the orbital velocities
-		double FACTOR = 0.05;
-		double vx, vy;
+		float FACTOR = 0.05f;
+		float vx, vy;
 		vx =  orbital_vel * cos(angle + (PI / 2) ) * FACTOR;
 		vy =  orbital_vel * sin(angle + (PI / 2) ) * FACTOR;
 
 		//random masses and push into vector
-		double m = rand()%20 +0.1;
+		float m = rand()%20 +0.1f;
 		arr.push_back(new ParticleData(x, y, m, vx, vy));
 	}
 }
-std::vector<ParticleData*> ParticleData::generateParticles(double a,
-	double b, int n, double R, double _centerMass, double vel_x, double vel_y)
+std::vector<ParticleData*> ParticleData::generateParticles(float a,
+	float b, int n, float R, float _centerMass, float vel_x, float vel_y)
 {
 	std::vector<ParticleData*> arr;
 	arr.reserve(n);
@@ -103,7 +103,7 @@ std::vector<ParticleData*> ParticleData::generateParticles(double a,
 void ParticleData::calcDistance(Vector2D force)
 {
 		//timestep per calculation
-		double TIME = 0.3; 
+		float TIME = 0.3f; 
 		{
 			//prevents NaN problems
 			if (force.x != force.x)
@@ -113,10 +113,10 @@ void ParticleData::calcDistance(Vector2D force)
 				force.y = 0;
 		}
 
-		double acc_x = force.x / mState;
-		double acc_y = force.y / mState;
+		float acc_x = force.x / mState;
+		float acc_y = force.y / mState;
 		//prevents points from accelerating too far from the center
-		double max = 1.0 / 25;
+		float max = 1.0f / 25;
 		if (acc_x >= max)
 		{
 			acc_x = max;
@@ -144,25 +144,25 @@ void ParticleData::calcDistance(Vector2D force)
 		this->xy->y += this->xy->vy;
 
 		//bounce particles off the borders
-		if (xy->x >= 0.99)
+		if (xy->x >= 0.99f)
 		{
-			xy->x = 0.99;
-			xy->vx *= -0.5;
+			xy->x = 0.99f;
+			xy->vx *= -0.5f;
 		}
-		if (xy->x <= -0.99)
+		if (xy->x <= -0.99f)
 		{
-			xy->x = -0.99;
-			xy->vx *= -0.5;
+			xy->x = -0.99f;
+			xy->vx *= -0.5f;
 		}
-		if (xy->y >= 0.99)
+		if (xy->y >= 0.99f)
 		{
-			xy->y = 0.99;
-			xy->vy *= -0.5;
+			xy->y = 0.99f;
+			xy->vy *= -0.5f;
 		}
-		if (xy->y <= -0.99)
+		if (xy->y <= -0.99f)
 		{
-			xy->y = -0.99;
-			xy->vy *= -0.5;
+			xy->y = -0.99f;
+			xy->vy *= -0.5f;
 		}
 }
 

@@ -1,7 +1,7 @@
 #include "Vector.h"
 #include <iostream>
 
-Vector2D::Vector2D(double xvar, double yvar)
+Vector2D::Vector2D(float xvar, float yvar)
 {
 	x = xvar;
 	y = yvar;
@@ -21,7 +21,7 @@ void Vector2D::print()
 	std::cout <<"Postion = ("<< x << "," << y <<") & Velocity= ("<<vx<<","<<vy<<")";
 }
 
-Vector2D::Vector2D(double xvar, double yvar, double _vx, double _vy)
+Vector2D::Vector2D(float xvar, float yvar, float _vx, float _vy)
 {
 	x = xvar;
 	y = yvar;
