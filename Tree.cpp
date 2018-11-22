@@ -9,7 +9,6 @@
 
 
 #include <stack>
-
 /*
 static/global variables go here 
 */
