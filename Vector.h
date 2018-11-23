@@ -7,13 +7,13 @@ public:
 	void print();
 	void reset();
 	Vector2D();
-	Vector2D(double xvar, double yvar);
-	Vector2D(double xvar, double yvar, double _vx, double _vy);
+	Vector2D(float xvar, float yvar);
+	Vector2D(float xvar, float yvar, float _vx, float _vy);
 	~Vector2D()= default;
-	double x;
-	double y;
-	double vx;
-	double vy;
+	float x;
+	float y;
+	float vx;
+	float vy;
 };
 
 #endif
