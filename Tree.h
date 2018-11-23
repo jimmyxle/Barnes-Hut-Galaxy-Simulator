@@ -48,7 +48,7 @@ private:
 
 
 	Vector2D COM; //center of mass
-	double totalMass;
+	float totalMass;
 
 	QuadNode* parent;
 	bool divided; 

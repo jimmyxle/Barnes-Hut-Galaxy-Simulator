@@ -9,18 +9,17 @@
 
 
 #include <stack>
-
 /*
 static/global variables go here 
 */
 
-const double _THETA = 0.9; 
+const float _THETA = 0.9f; 
 //close to 1.0, determines # calcs.
 //Smaller number, more calcs
 
-const double G_CONST = 6.674 * pow(10.0, -11.0);
+const float G_CONST = 6.674e-11f;
 //prevents dividing by zero
-const double SOFT_CONST = 0.01;
+const float SOFT_CONST = 0.01F;
 
 std::vector<ParticleData*> Galaxy::renegades;
 
@@ -45,7 +44,7 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max,
 	particle = nullptr;
 
 	topLeft = min;
-	center = Vector2D( (min.x + (max.x-min.x)/2.0) , (min.y + (max.y-min.y)/2.0),0,0 );
+	center = Vector2D( (min.x + (max.x-min.x)/2.0f) , (min.y + (max.y-min.y)/2.0f),0,0 );
 	botRight = max;
 
 	COM = Vector2D();
@@ -80,8 +79,8 @@ QuadNode::~QuadNode()
 
 bool QuadNode::contains(ParticleData &_particle)
 {
-	double p_x = (&_particle)->xy->x;
-	double p_y = (&_particle)->xy->y;
+	float p_x = (&_particle)->xy->x;
+	float p_y = (&_particle)->xy->y;
 
 	if (p_x >= this->topLeft.x &&
 		p_x < this->botRight.x && 
@@ -173,14 +172,14 @@ int QuadNode::insert(ParticleData &newParticle)
 				this->particle->xy->y == newParticle.xy->y)
 			{
 				if (&newParticle.xy->x <= 0)
-					newParticle.xy->x += 0.01;
+					newParticle.xy->x += 0.01f;
 				else
-					newParticle.xy->x -= 0.01;
+					newParticle.xy->x -= 0.01f;
 
 				if (&newParticle.xy->y <= 0)
-					newParticle.xy->y += 0.01;
+					newParticle.xy->y += 0.01f;
 				else
-					newParticle.xy->y -= 0.01;
+					newParticle.xy->y -= 0.01f;
 			}
 		}
 
@@ -408,7 +407,7 @@ void QuadNode::calcForce(ParticleData& _particle, Vector2D &forces)
 		for (int i = 0; i<s; ++i)
 		{
 			Vector2D force4 = calcAcceleration(_particle, *Galaxy::renegades[i]);
-			double FACTOR = 1.0;
+			float FACTOR = 1.0;
 			force1.x += force4.x * FACTOR;
 			force1.y += force4.y * FACTOR;
 		}
@@ -427,23 +426,23 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 	}
 	else
 	{
-		double x1 = COM.x;
-		double y1 = COM.y;
+		float x1 = COM.x;
+		float y1 = COM.y;
 		
-		double x2 = _particle.xy->x;
-		double y2 = _particle.xy->y;
+		float x2 = _particle.xy->x;
+		float y2 = _particle.xy->y;
 
-		double mass1 = this->totalMass;
-		double mass2 = _particle.mState;
+		float mass1 = this->totalMass;
+		float mass2 = _particle.mState;
 
-		double r = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
+		float r = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
 
-		double d = this->botRight.x - this->topLeft.x;
+		float d = this->botRight.x - this->topLeft.x;
 		
-		double theta = d / r;
+		float theta = d / r;
 		if (theta <= _THETA)
 		{
-			double k = G_CONST *  (mass1*mass2) / (r*r);
+			float k = G_CONST *  (mass1*mass2) / (r*r);
 
 			force2.x += k*(x1-x2);
 			force2.y += k*(y1-y2);
@@ -476,20 +475,20 @@ Vector2D QuadNode::calcAcceleration(ParticleData& _particle1, ParticleData& _par
 	if (&_particle1 == &_particle2)
 		return force3;
 
-	const double &x1 = _particle1.xy->x;
-	const double &y1 = _particle1.xy->y;
+	const float &x1 = _particle1.xy->x;
+	const float &y1 = _particle1.xy->y;
 
-	const double &x2 = _particle2.xy->x;
-	const double &y2 = _particle2.xy->y;
+	const float &x2 = _particle2.xy->x;
+	const float &y2 = _particle2.xy->y;
 
-	const double &mass1 = _particle1.mState;
-	const double &mass2 = _particle2.mState; 
+	const float &mass1 = _particle1.mState;
+	const float &mass2 = _particle2.mState; 
 
-	double r = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
+	float r = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + SOFT_CONST);
 
 	 if (r > 0)
 	{
-		double k = G_CONST * (mass2*mass1) / (r*r);
+		float k = G_CONST * (mass2*mass1) / (r*r);
 
 		force3.x += k * (x2 - x1) ;
 		force3.y += k * (y2 - y1);
@@ -553,7 +552,7 @@ void QuadNode::reset(const Vector2D &min, const Vector2D &max )
 	}
 	topLeft = min;
 	botRight = max;
-	center = Vector2D((min.x + (max.x - min.x) / 2.0), (min.y + (max.y - min.y) / 2.0), 0, 0);
+	center = Vector2D((min.x + (max.x - min.x) / 2.0f), (min.y + (max.y - min.y) / 2.0f), 0, 0);
 	numParticles = 0;
 	totalMass = 0;
 	COM.x = 0;

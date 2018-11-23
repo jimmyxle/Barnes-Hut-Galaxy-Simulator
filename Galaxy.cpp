@@ -1,7 +1,4 @@
 #include "Galaxy.h"
-#include <ctime>
-#include <thread>
-
 
 
 
@@ -19,8 +16,8 @@ Galaxy::Galaxy()
 	depth = 0;
 }
 
-Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P,
-	double vel_x, double vel_y, double radius)
+Galaxy::Galaxy(float _x, float _y, float _centerMass, int _NUM_P,
+	float vel_x, float vel_y, float radius)
 {
 	NUMBER_PARTICLES = _NUM_P;
 
@@ -32,7 +29,7 @@ Galaxy::Galaxy(double _x, double _y, double _centerMass, int _NUM_P,
 	y = _y;
 	allParticles = particle.generateParticles(x, y, NUMBER_PARTICLES, radius,
 		_centerMass, vel_x, vel_y);
-	double boxSize = 3;
+	float boxSize = 3;
 	max = new Vector2D(boxSize, -boxSize, 0, 0);
 	min = new Vector2D(-boxSize, boxSize, 0, 0);
 
@@ -54,7 +51,7 @@ Galaxy::~Galaxy()
 /*
 this adds ones planets to the other list and change num planets var in main
 */
-void Galaxy::add_galaxy(Galaxy& galaxy, double vel_x, double vel_y)
+void Galaxy::add_galaxy(Galaxy& galaxy, float vel_x, float vel_y)
 {
 	for (auto it = galaxy.allParticles.begin(); it != galaxy.allParticles.end(); it++)
 	{
@@ -80,8 +77,8 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window
 	bool init = true;
 	do
 	{
-		double x = (arr[0])->xy->x;
-		double y = (arr[0])->xy->y;
+		float x = (arr[0])->xy->x;
+		float y = (arr[0])->xy->y;
 		glVertex2d(x, y);
 		init = !init;
 	} while (init);
@@ -93,8 +90,8 @@ void Galaxy::displayParticles(std::vector<ParticleData*> arr, GLFWwindow* window
 
 	for (int i = 1; i < SIZE; i++)
 	{
-		double x = (arr[i])->xy->x;
-		double y = (arr[i])->xy->y;
+		float x = (arr[i])->xy->x;
+		float y = (arr[i])->xy->y;
 		glVertex2d(x, y);
 	}
 
@@ -120,8 +117,8 @@ void Galaxy::displayParticles2(std::vector<ParticleData*> arr1,
 	{
 		glColor3f(255, 0, 0);
 
-		double x = (arr1[0])->xy->x;
-		double y = (arr1[0])->xy->y;
+		float x = (arr1[0])->xy->x;
+		float y = (arr1[0])->xy->y;
 		glVertex2d(x, y);
 
 		x = (arr1[SIZE / 2])->xy->x;
@@ -140,8 +137,8 @@ void Galaxy::displayParticles2(std::vector<ParticleData*> arr1,
 	glColor3f(0, 255, 0);
 	for (int i = 1; i < SIZE / 2; i++)
 	{
-		double x = (arr1[i])->xy->x;
-		double y = (arr1[i])->xy->y;
+		float x = (arr1[i])->xy->x;
+		float y = (arr1[i])->xy->y;
 		glVertex2d(x, y);
 	}
 
@@ -149,8 +146,8 @@ void Galaxy::displayParticles2(std::vector<ParticleData*> arr1,
 
 	for (int i = SIZE / 2 + 1; i < SIZE; i++)
 	{
-		double x = (arr1[i])->xy->x;
-		double y = (arr1[i])->xy->y;
+		float x = (arr1[i])->xy->x;
+		float y = (arr1[i])->xy->y;
 		glVertex2d(x, y);
 	}
 	glEnd();
@@ -158,7 +155,7 @@ void Galaxy::displayParticles2(std::vector<ParticleData*> arr1,
 }
 
 
-void Galaxy::recursiveBoxes(QuadNode& qt, double factor)
+void Galaxy::recursiveBoxes(QuadNode& qt, float factor)
 {
 	glBegin(GL_POLYGON);
 	glVertex2d(factor*qt.getVector(0).x, factor*qt.getVector(0).y);
@@ -212,13 +209,13 @@ void Galaxy::displayQuadrant(QuadNode& quad, QuadNode& second)
 }
 
 
-double Galaxy::clockToMilliseconds(clock_t ticks) {
-	return (ticks / (double)CLOCKS_PER_SEC)*1000.0;
+float Galaxy::clockToMilliseconds(clock_t ticks) {
+	return (ticks / (float)CLOCKS_PER_SEC)*1000.0f;
 }
 
 int Galaxy::running_display()
 {
-	std::cout << "running display mode" << std::endl;
+	std::cout << "Single galaxy mode:\t["<< NUMBER_PARTICLES <<"] particles." << std::endl;
 
 	GLFWwindow* window;
 	if (!glfwInit())
@@ -234,55 +231,175 @@ int Galaxy::running_display()
 		return -1;
 	}
 
-	std::vector<Vector2D> forces1(NUMBER_PARTICLES);
-
+	/* constants */
 	size_t max = NUMBER_PARTICLES;
 
+	/* arrays */
+	std::vector<Vector2D> forces(NUMBER_PARTICLES);
+
+	std::vector<cl_float4> positions(NUMBER_PARTICLES);
+	std::vector<cl_float2> velocities(NUMBER_PARTICLES);
+
+	std::vector<cl_float2> forces_copy(NUMBER_PARTICLES);
+	
+
+	/* opencl context*/
+	auto program = CreateProgram("calc_dist.cl", 1); //set to 0 for cpu, set to 1 for gpu
+		//create context
+	auto context = program.getInfo<CL_PROGRAM_CONTEXT>();
+	auto devices = context.getInfo<CL_CONTEXT_DEVICES>();
+
+	_ASSERT(devices.size() > 0);
+	auto& device = devices.back();
+
+
+	/* clock stuff */
 	clock_t deltaTime = 0;
 	unsigned int frames = 0;
-	double  frameRate = 30;
-	double  averageFrameTimeMilliseconds = 33.333;
-
 	std::clock_t end;
 	std::clock_t begin;
-	//std::clock_t start;
 	std::clock_t time;
 
 	while (!glfwWindowShouldClose(window))
 	{
 		begin = clock();
-		//start = begin;
+
 
 
 		//task parallel
 		depth = root->buildTree(allParticles, NUMBER_PARTICLES);
-		//data parallelism
-		std::thread cmd_th(&QuadNode::computeMassDistribution, root);
-		displayParticles(allParticles, window);
-
-		cmd_th.join();
-		//display_th.join();
-
-
+		/*
+			x = x; y = y; vx = z; vy = w;
+		
+		*/
 		for (unsigned int i = 0; i < max; i++)
 		{
-			forces1[i].reset();
+			positions[i].x = (allParticles[i]->xy->x);
+			positions[i].y = (allParticles[i]->xy->y);
+			positions[i].z = (allParticles[i]->xy->vx);
+			positions[i].w = (allParticles[i]->xy->vy);
+
 		}
+		//data parallelism
+		root->computeMassDistribution();
+		
+		displayParticles(allParticles, window);
+
+
+
+
 
 		/**/
 		//calc forces 
 		//data parallel
 
+	
+
 		for (unsigned int i = 0; i < max; i++)
 		{
-			root->calcForce(*(allParticles[i]), (forces1[i]));
+			root->calcForce(*(allParticles[i]), (forces[i]));
 
-			allParticles[i]->calcDistance(forces1[i]);
+
+			//prevents NaN problems
+			if (forces[i].x != forces[i].x)
+				forces[i].x = 0;
+
+			if (forces[i].y != forces[i].y)
+				forces[i].y = 0;
+
+			//prevents points from accelerating too far from the center
+			float max = 1.0 / 2;
+			if (forces[i].x >= max)
+			{
+				forces[i].x = max;
+			}
+			if (forces[i].x < -max)
+			{
+				forces[i].x = -max;
+			}
+
+			if (forces[i].y >= max)
+			{
+				forces[i].y = max;
+			}
+			if (forces[i].y < -max)
+			{
+				forces[i].y = -max;
+			}
+
+			forces_copy[i].x = forces[i].x;
+			forces_copy[i].y = forces[i].y;
+
 		}
 
-		allParticles[0]->calcDistance(forces1[0]);
+		/*
+		here we od the opencl call
+		*/
+		
+			cl_int err = 0;
+
+			cl::Kernel kernel(program, "calc_dist", &err);
+			//auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
+			auto workGroupSize = max;
+
+			cl::Buffer buf_force(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float2)*max, forces_copy.data(), &err);
+			cl::Buffer buf_pos(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float4)*max, positions.data(), &err);
+			cl::Buffer outBuf_pos(context, CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, sizeof(cl_float4)*max, NULL, &err);
+			err = kernel.setArg(0, buf_force);
+			err = kernel.setArg(1, buf_pos);
+			err = kernel.setArg(2, outBuf_pos);
+			err = kernel.setArg(3, sizeof(cl_float2)*workGroupSize, nullptr); //local for forces
+			err = kernel.setArg(4, sizeof(cl_float4)*workGroupSize, nullptr); //local for positions 
+
+			std::vector<cl_float4> outVec(max);
+
+			//create command queueue
+			cl::CommandQueue queue(context, device);
+			err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(max), cl::NDRange(workGroupSize));
+
+			err = queue.enqueueReadBuffer(outBuf_pos, CL_TRUE, 0, sizeof(cl_float4)*outVec.size(), outVec.data());
+
+			queue.flush();
+			queue.finish();
+
+			for (unsigned int i = 0; i < max; i++)
+			{
+				(allParticles[i]->xy->x) = outVec[i].x;
+				(allParticles[i]->xy->y) = outVec[i].y;
+				(allParticles[i]->xy->vx) = outVec[i].z;
+				(allParticles[i]->xy->vy) = outVec[i].w;
+
+				if ((allParticles[i]->xy->x) >= 0.99)
+				{
+					(allParticles[i]->xy->x) = 0.99;
+					(allParticles[i]->xy->vx) *= -1.0;
+				}
+				if ((allParticles[i]->xy->x) <= -0.99)
+				{
+					(allParticles[i]->xy->x) = -0.99;
+					(allParticles[i]->xy->vx) *= -1.0;
+				}
+				if ((allParticles[i]->xy->y) >= 0.99)
+				{
+					(allParticles[i]->xy->y) = 0.99;
+					(allParticles[i]->xy->vy) *= -1.0;
+				}
+				if ((allParticles[i]->xy->y) <= -0.99)
+				{
+					(allParticles[i]->xy->y) = -0.99;
+					(allParticles[i]->xy->vy) *= -1.0;
+				}
+			}
 
 
+
+			/* c++ wrapper class handles resource management
+			https://stackoverflow.com/questions/17246541/releasing-opencl-memory-kernels-devices-etc
+			*/
+
+		
+
+		
 		/* end calc forces*/
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -312,7 +429,7 @@ int Galaxy::running_display()
 
 int Galaxy::two_running_display(Galaxy& second)
 {
-	std::cout << "running display mode" << std::endl;
+	std::cout << "Two Galaxies mode: ["<<NUMBER_PARTICLES<<"] particles" << std::endl;
 	Vector2D target;
 
 	GLFWwindow* window;
@@ -328,15 +445,32 @@ int Galaxy::two_running_display(Galaxy& second)
 		glfwTerminate();
 		return -1;
 	}
-	//glfwMakeContextCurrent(window);
 
-	std::vector<Vector2D> forces(NUMBER_PARTICLES);
 	size_t max = NUMBER_PARTICLES;
+
+	/* vectors */
+	std::vector<Vector2D> forces(NUMBER_PARTICLES);
+
+	std::vector<cl_float4> positions(NUMBER_PARTICLES);
+	std::vector<cl_float2> velocities(NUMBER_PARTICLES);
+
+	std::vector<cl_float2> forces_copy(NUMBER_PARTICLES);
+
+
+	/* opencl context*/
+	auto program = CreateProgram("calc_dist.cl", 1); //set to 0 for cpu, set to 1 for gpu
+	//create context
+	auto context = program.getInfo<CL_PROGRAM_CONTEXT>();
+	auto devices = context.getInfo<CL_CONTEXT_DEVICES>();
+	//auto devic   = context.getInfo<CL_CONTEXT_DEVICES>();
+
+	_ASSERT(devices.size() > 0);
+	auto& device = devices.back();
+
+
 
 	clock_t deltaTime = 0;
 	unsigned int frames = 0;
-
-
 	std::clock_t end;
 	std::clock_t start;
 	std::clock_t time;
@@ -347,37 +481,146 @@ int Galaxy::two_running_display(Galaxy& second)
 		start = clock();
 
 		//task parallel
-		root->buildTree(allParticles, NUMBER_PARTICLES);
+		depth = root->buildTree(allParticles, NUMBER_PARTICLES);
+
+		/*
+		x = x; y = y; vx = z; vy = w;
+
+		*/
+		for (unsigned int i = 0; i < max; i++)
+		{
+			positions[i].x = (allParticles[i]->xy->x);
+			positions[i].y = (allParticles[i]->xy->y);
+			positions[i].z = (allParticles[i]->xy->vx);
+			positions[i].w = (allParticles[i]->xy->vy);
+
+		}
 
 		//data parallel
 
-		std::thread cmd_th(&QuadNode::computeMassDistribution, root);
+		root->computeMassDistribution();
 		
 		displayParticles2(allParticles, second.allParticles, window);
 
-		cmd_th.join();
+	
 
 
 		//displayParticles2(allParticles, second.allParticles);
 		//displayQuadrant(*root, *second.root);
 
-		size_t max = allParticles.size();
+		//size_t max = allParticles.size();
 
 
-		for (unsigned int i = 0; i < max; i++)
-		{
-			forces[i].reset();
-		}
 
 		//data parallel 
 
 		for (unsigned int i = 0; i < max; i++)
 		{
 			root->calcForce(*(allParticles[i]), (forces[i]));
-			allParticles[i]->calcDistance(forces[i]);
+
+			//prevents NaN problems
+			if (forces[i].x != forces[i].x)
+				forces[i].x = 0;
+
+			if (forces[i].y != forces[i].y)
+				forces[i].y = 0;
+
+			//prevents points from accelerating too far from the center
+			float max = 1.0 / 2;
+			if (forces[i].x >= max)
+			{
+				forces[i].x = max;
+			}
+			if (forces[i].x < -max)
+			{
+				forces[i].x = -max;
+			}
+
+			if (forces[i].y >= max)
+			{
+				forces[i].y = max;
+			}
+			if (forces[i].y < -max)
+			{
+				forces[i].y = -max;
+			}
+
+			forces_copy[i].x = forces[i].x;
+			forces_copy[i].y = forces[i].y;
 		}
 		
-		
+
+		/*
+		here we od the opencl call
+		*/
+		{
+			cl_int err = 0;
+
+			cl::Kernel kernel(program, "calc_dist", &err);
+			//auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
+			auto workGroupSize = max;
+
+			cl::Buffer buf_force(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float2)*max, forces_copy.data(), &err);
+			cl::Buffer buf_pos(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float4)*max, positions.data(), &err);
+			cl::Buffer outBuf_pos(context, CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, sizeof(cl_float4)*max, NULL, &err);
+			err = kernel.setArg(0, buf_force);
+			err = kernel.setArg(1, buf_pos);
+			err = kernel.setArg(2, outBuf_pos);
+			err = kernel.setArg(3, sizeof(cl_float2)*workGroupSize, nullptr); //local for forces
+			err = kernel.setArg(4, sizeof(cl_float4)*workGroupSize, nullptr); //local for positions 
+
+			std::vector<cl_float4> outVec(max);
+
+			//create command queueue
+			cl::CommandQueue queue(context, device);
+			err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(max), cl::NDRange(workGroupSize));
+
+			err = queue.enqueueReadBuffer(outBuf_pos, CL_TRUE, 0, sizeof(cl_float4)*outVec.size(), outVec.data());
+
+			queue.flush();
+			queue.finish();
+
+			for (unsigned int i = 0; i < max; i++)
+			{
+				(allParticles[i]->xy->x) = outVec[i].x;
+				(allParticles[i]->xy->y) = outVec[i].y;
+				(allParticles[i]->xy->vx) = outVec[i].z;
+				(allParticles[i]->xy->vy) = outVec[i].w;
+
+				if ((allParticles[i]->xy->x) >= 0.99)
+				{
+					(allParticles[i]->xy->x) = 0.99;
+					(allParticles[i]->xy->vx) *= -0.5;
+				}
+				if ((allParticles[i]->xy->x) <= -0.99)
+				{
+					(allParticles[i]->xy->x) = -0.99;
+					(allParticles[i]->xy->vx) *= -0.5;
+				}
+				if ((allParticles[i]->xy->y) >= 0.99)
+				{
+					(allParticles[i]->xy->y) = 0.99;
+					(allParticles[i]->xy->vy) *= -0.5;
+				}
+				if ((allParticles[i]->xy->y) <= -0.99)
+				{
+					(allParticles[i]->xy->y) = -0.99;
+					(allParticles[i]->xy->vy) *= -0.5;
+				}
+
+			}
+
+
+
+			/* c++ wrapper class handles resource management
+			https://stackoverflow.com/questions/17246541/releasing-opencl-memory-kernels-devices-etc
+			*/
+
+
+
+		}
+
+
 
 		//do center last
 	//	root->calcForce(*(allParticles[0]), (forces[0]));
