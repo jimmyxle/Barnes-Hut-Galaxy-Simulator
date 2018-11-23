@@ -1,4 +1,10 @@
 Latest:
+Fixed the calc_dist.cl kernel. 
+did debugging on my opencl memory objects
+fixed galaxy behaviour and cleaned up the console output
+removed the for loop that resets the forces 
+
+
 So got to set up openCL1.2 on visualStudio 2017.
 linked lib, got my device information, ran .cl files
 uploaded samples from https://www.youtube.com/watch?v=YU_pRT-Be0c&list=PLzy5q1NUJKCJocUKsRxZ0IPz29p38xeM-&index=1
