@@ -6,9 +6,7 @@
 #include "Galaxy.h"
 #include <assert.h>
 #include <stack>
-#include <mutex>
 
-std::mutex mu;
 /*
 static/global variables go here 
 */
