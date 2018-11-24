@@ -5,15 +5,15 @@
 #include <sstream>
 #include "Galaxy.h"
 #include <assert.h>
-
-
-
 #include <stack>
+#include <mutex>
+
+std::mutex mu;
 /*
 static/global variables go here 
 */
 
-const float _THETA = 0.9f; 
+const float _THETA = 1.0f; 
 //close to 1.0, determines # calcs.
 //Smaller number, more calcs
 
@@ -35,6 +35,7 @@ QuadNode::QuadNode()
 	numParticles = 0;
 	numSubdivisions = 0;
 	QUADRANT = NONE;
+	COM_calculated = false;
 
 }
 
@@ -59,6 +60,7 @@ QuadNode::QuadNode(const Vector2D &min, const Vector2D &max,
 	QUADRANT = quad;
 
 	level = level_given;
+	COM_calculated = false;
 
 
 }
@@ -123,6 +125,7 @@ int QuadNode::insert(ParticleData &newParticle)
 		//quadrant has a particle, so subdivide if not yet
 		if (nodeArr.size() == 0 && divided == false)
 		{
+			
 			this->subdivide();
 		}
 
@@ -162,6 +165,8 @@ int QuadNode::insert(ParticleData &newParticle)
 	{
 		if (this->nodeArr.size() == 0 && this->divided == false)
 		{
+			
+
 			this->subdivide();
 		}
 		//particle is in the exact same position as another particle
@@ -279,8 +284,6 @@ Vector2D QuadNode::getVector(int n)
 		break;
 	}
 }
-
-
 void QuadNode::subdivide()
 {
 	Vector2D new_min = Vector2D(center.x, topLeft.y );
@@ -338,14 +341,14 @@ void QuadNode::computeMassDistribution()
 	}
 }
 
-void QuadNode::computeMassDistribution_iterative(QuadNode* root)
+void QuadNode::computeMassDistribution_iterative()
 {
-	if (root == nullptr)
+	if (this == nullptr)
 		return;
-	const unsigned int MAX = 2000;
+	const unsigned int MAX = 1000;
 	std::stack<QuadNode*> stk1[MAX];
 	std::stack<QuadNode*> stk2[MAX];
-	QuadNode* ptr = root;
+	QuadNode* ptr = this;
 	QuadNode* temp = nullptr;
 	stk1->push(ptr);
 	
@@ -399,6 +402,8 @@ void QuadNode::computeMassDistribution_iterative(QuadNode* root)
 }
 
 
+
+
 void QuadNode::calcForce(ParticleData& _particle, Vector2D &forces)
 {
 	Vector2D force1 = this->calcForceTree(_particle);
@@ -450,6 +455,7 @@ Vector2D QuadNode::calcForceTree(ParticleData& _particle)
 		else
 		{
 			Vector2D partial;
+
 
 			for (std::vector<QuadNode*>::iterator it = nodeArr.begin();
 				it != nodeArr.end(); it++)
