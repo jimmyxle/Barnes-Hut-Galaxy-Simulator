@@ -213,6 +213,7 @@ float Galaxy::clockToMilliseconds(clock_t ticks) {
 	return (ticks / (float)CLOCKS_PER_SEC)*1000.0f;
 }
 
+
 int Galaxy::running_display()
 {
 	std::cout << "Single galaxy mode:\t["<< NUMBER_PARTICLES <<"] particles." << std::endl;
@@ -252,6 +253,12 @@ int Galaxy::running_display()
 	_ASSERT(devices.size() > 0);
 	auto& device = devices.back();
 
+	cl_int err = 0;
+	cl::Kernel kernel(program, "calc_dist", &err);
+	//auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
+	auto workGroupSize = max;
+	std::vector<cl_float4> outVec(max);
+	cl::CommandQueue queue(context, device);
 
 	/* clock stuff */
 	clock_t deltaTime = 0;
@@ -333,14 +340,10 @@ int Galaxy::running_display()
 		}
 
 		/*
-		here we od the opencl call
+		here we d the opencl call
 		*/
 		
-			cl_int err = 0;
-
-			cl::Kernel kernel(program, "calc_dist", &err);
-			//auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
-			auto workGroupSize = max;
+	
 
 			cl::Buffer buf_force(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float2)*max, forces_copy.data(), &err);
 			cl::Buffer buf_pos(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float4)*max, positions.data(), &err);
@@ -351,16 +354,12 @@ int Galaxy::running_display()
 			err = kernel.setArg(3, sizeof(cl_float2)*workGroupSize, nullptr); //local for forces
 			err = kernel.setArg(4, sizeof(cl_float4)*workGroupSize, nullptr); //local for positions 
 
-			std::vector<cl_float4> outVec(max);
-
-			//create command queueue
-			cl::CommandQueue queue(context, device);
+			
 			err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(max), cl::NDRange(workGroupSize));
 
 			err = queue.enqueueReadBuffer(outBuf_pos, CL_TRUE, 0, sizeof(cl_float4)*outVec.size(), outVec.data());
 
-			queue.flush();
-			queue.finish();
+		
 
 			for (unsigned int i = 0; i < max; i++)
 			{
@@ -369,25 +368,25 @@ int Galaxy::running_display()
 				(allParticles[i]->xy->vx) = outVec[i].z;
 				(allParticles[i]->xy->vy) = outVec[i].w;
 
-				if ((allParticles[i]->xy->x) >= 0.99)
+				if ((allParticles[i]->xy->x) >= 0.99f)
 				{
-					(allParticles[i]->xy->x) = 0.99;
-					(allParticles[i]->xy->vx) *= -1.0;
+					(allParticles[i]->xy->x) = 0.99f;
+					(allParticles[i]->xy->vx) *= -1.0f;
 				}
-				if ((allParticles[i]->xy->x) <= -0.99)
+				if ((allParticles[i]->xy->x) <= -0.99f)
 				{
-					(allParticles[i]->xy->x) = -0.99;
-					(allParticles[i]->xy->vx) *= -1.0;
+					(allParticles[i]->xy->x) = -0.99f;
+					(allParticles[i]->xy->vx) *= -1.0f;
 				}
-				if ((allParticles[i]->xy->y) >= 0.99)
+				if ((allParticles[i]->xy->y) >= 0.99f)
 				{
-					(allParticles[i]->xy->y) = 0.99;
-					(allParticles[i]->xy->vy) *= -1.0;
+					(allParticles[i]->xy->y) = 0.99f;
+					(allParticles[i]->xy->vy) *= -1.0f;
 				}
-				if ((allParticles[i]->xy->y) <= -0.99)
+				if ((allParticles[i]->xy->y) <= -0.99f)
 				{
-					(allParticles[i]->xy->y) = -0.99;
-					(allParticles[i]->xy->vy) *= -1.0;
+					(allParticles[i]->xy->y) = -0.99f;
+					(allParticles[i]->xy->vy) *= -1.0f;
 				}
 			}
 
@@ -463,10 +462,17 @@ int Galaxy::two_running_display(Galaxy& second)
 	auto context = program.getInfo<CL_PROGRAM_CONTEXT>();
 	auto devices = context.getInfo<CL_CONTEXT_DEVICES>();
 	//auto devic   = context.getInfo<CL_CONTEXT_DEVICES>();
+	
 
 	_ASSERT(devices.size() > 0);
 	auto& device = devices.back();
 
+	cl_int err = 0;
+	cl::Kernel kernel(program, "calc_dist", &err);
+	//auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
+	auto workGroupSize = max;
+	std::vector<cl_float4> outVec(max);
+	cl::CommandQueue queue(context, device);
 
 
 	clock_t deltaTime = 0;
@@ -475,14 +481,16 @@ int Galaxy::two_running_display(Galaxy& second)
 	std::clock_t start;
 	std::clock_t time;
 
-
+	std::clock_t test_start, test_end;
 	while (!glfwWindowShouldClose(window))
 	{
 		start = clock();
 
 		//task parallel
+		//std::cout << " < ==== >\n";
+		//test_start = clock();
 		depth = root->buildTree(allParticles, NUMBER_PARTICLES);
-
+	//	std::cout << "depth: " << this->depth << "\n";
 		/*
 		x = x; y = y; vx = z; vy = w;
 
@@ -495,17 +503,22 @@ int Galaxy::two_running_display(Galaxy& second)
 			positions[i].w = (allParticles[i]->xy->vy);
 
 		}
+		//test_end = clock();
+		//std::cout << "build tree took: " << test_end - test_start << "\n";
 
 		//data parallel
-
+		//test_start = clock();
 		root->computeMassDistribution();
-		
+
+		//root->computeMassDistribution_iterative();
+		//test_end = clock();
+		//std::cout << "cmd took: " << test_end - test_start << "\n";
+
+		//test_start = clock();
 		displayParticles2(allParticles, second.allParticles, window);
-
+		//test_end = clock();
+		//std::cout << "display tree took: " << test_end - test_start << "\n";
 	
-
-
-		//displayParticles2(allParticles, second.allParticles);
 		//displayQuadrant(*root, *second.root);
 
 		//size_t max = allParticles.size();
@@ -513,7 +526,7 @@ int Galaxy::two_running_display(Galaxy& second)
 
 
 		//data parallel 
-
+		//test_start = clock();
 		for (unsigned int i = 0; i < max; i++)
 		{
 			root->calcForce(*(allParticles[i]), (forces[i]));
@@ -548,18 +561,16 @@ int Galaxy::two_running_display(Galaxy& second)
 			forces_copy[i].x = forces[i].x;
 			forces_copy[i].y = forces[i].y;
 		}
+		//test_end = clock();
+		//std::cout << "calcforce tree took: " << test_end - test_start << "\n";
 		
 
 		/*
-		here we od the opencl call
+		here we do the opencl call
 		*/
-		{
-			cl_int err = 0;
-
-			cl::Kernel kernel(program, "calc_dist", &err);
-			//auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
-			auto workGroupSize = max;
-
+		
+		
+	//	test_start = clock();
 			cl::Buffer buf_force(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float2)*max, forces_copy.data(), &err);
 			cl::Buffer buf_pos(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float4)*max, positions.data(), &err);
 			cl::Buffer outBuf_pos(context, CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, sizeof(cl_float4)*max, NULL, &err);
@@ -569,16 +580,13 @@ int Galaxy::two_running_display(Galaxy& second)
 			err = kernel.setArg(3, sizeof(cl_float2)*workGroupSize, nullptr); //local for forces
 			err = kernel.setArg(4, sizeof(cl_float4)*workGroupSize, nullptr); //local for positions 
 
-			std::vector<cl_float4> outVec(max);
 
 			//create command queueue
-			cl::CommandQueue queue(context, device);
 			err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(max), cl::NDRange(workGroupSize));
-
 			err = queue.enqueueReadBuffer(outBuf_pos, CL_TRUE, 0, sizeof(cl_float4)*outVec.size(), outVec.data());
 
-			queue.flush();
-			queue.finish();
+			//queue.flush();
+		//	queue.finish();
 
 			for (unsigned int i = 0; i < max; i++)
 			{
@@ -587,28 +595,30 @@ int Galaxy::two_running_display(Galaxy& second)
 				(allParticles[i]->xy->vx) = outVec[i].z;
 				(allParticles[i]->xy->vy) = outVec[i].w;
 
-				if ((allParticles[i]->xy->x) >= 0.99)
+				if ((allParticles[i]->xy->x) >= 0.99f)
 				{
-					(allParticles[i]->xy->x) = 0.99;
-					(allParticles[i]->xy->vx) *= -0.5;
+					(allParticles[i]->xy->x) = 0.99f;
+					(allParticles[i]->xy->vx) *= -0.5f;
 				}
-				if ((allParticles[i]->xy->x) <= -0.99)
+				if ((allParticles[i]->xy->x) <= -0.99f)
 				{
-					(allParticles[i]->xy->x) = -0.99;
-					(allParticles[i]->xy->vx) *= -0.5;
+					(allParticles[i]->xy->x) = -0.99f;
+					(allParticles[i]->xy->vx) *= -0.5f;
 				}
-				if ((allParticles[i]->xy->y) >= 0.99)
+				if ((allParticles[i]->xy->y) >= 0.99f)
 				{
-					(allParticles[i]->xy->y) = 0.99;
-					(allParticles[i]->xy->vy) *= -0.5;
+					(allParticles[i]->xy->y) = 0.99f;
+					(allParticles[i]->xy->vy) *= -0.5f;
 				}
-				if ((allParticles[i]->xy->y) <= -0.99)
+				if ((allParticles[i]->xy->y) <= -0.99f)
 				{
-					(allParticles[i]->xy->y) = -0.99;
-					(allParticles[i]->xy->vy) *= -0.5;
+					(allParticles[i]->xy->y) = -0.99f;
+					(allParticles[i]->xy->vy) *= -0.5f;
 				}
 
 			}
+		//	test_end = clock();
+		//	std::cout << "calcdist took: " << test_end - test_start << "\n";
 
 
 
@@ -617,15 +627,8 @@ int Galaxy::two_running_display(Galaxy& second)
 			*/
 
 
-
-		}
-
-
-
-		//do center last
-	//	root->calcForce(*(allParticles[0]), (forces[0]));
-
-	//	allParticles[0]->calcDistance(forces[0]);
+			for(unsigned int i = 0; i < max; i++) forces[i].reset();
+		
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

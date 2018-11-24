@@ -1,5 +1,6 @@
-#ifndef _VECTOR_H
-#define _VECTOR_H
+#pragma once
+
+
 
 class Vector2D
 {
@@ -16,4 +17,3 @@ public:
 	float vy;
 };
 
-#endif

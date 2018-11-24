@@ -81,8 +81,8 @@ void ParticleData::createParticle(float a, float b, float radius,
 		//adjust the orbital velocities
 		float FACTOR = 0.05f;
 		float vx, vy;
-		vx =  orbital_vel * cos(angle + (PI / 2) ) * FACTOR;
-		vy =  orbital_vel * sin(angle + (PI / 2) ) * FACTOR;
+		vx =  orbital_vel * cos(angle + (PI / 2) ) * FACTOR + vel_x;
+		vy =  orbital_vel * sin(angle + (PI / 2) ) * FACTOR + vel_y;
 
 		//random masses and push into vector
 		float m = rand()%20 +0.1f;

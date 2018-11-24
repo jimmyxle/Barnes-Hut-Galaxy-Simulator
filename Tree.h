@@ -26,7 +26,7 @@ public:
 	bool contains(ParticleData &particle);
 
 	void computeMassDistribution();	
-	void computeMassDistribution_iterative(QuadNode* root);
+	void computeMassDistribution_iterative();
 
 	void calcForce(ParticleData& _particle, Vector2D &forces);
 	Vector2D calcForceTree( ParticleData& _particle);
@@ -34,9 +34,11 @@ public:
 
 	Vector2D calcAcceleration(ParticleData& _particle1, ParticleData& _particle2); 
 
-	// variables
-	std::vector<QuadNode*> nodeArr; //4 children, 0 NE, 1 NW, 2SE, 3 SW
 	Vector2D getVector(int n);
+	// variables
+	std::vector<QuadNode*> nodeArr; //4 children, 0: NE, 1: NW, 2: SE, 3: SW
+	int numSubdivisions;
+
 
 
 private:
@@ -53,7 +55,6 @@ private:
 	QuadNode* parent;
 	bool divided; 
 	int numParticles;
-	int numSubdivisions;
 	Quadrant QUADRANT;
 
 	int level;

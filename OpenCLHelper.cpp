@@ -12,7 +12,8 @@ cl::Program CreateProgram(const std::string& file, unsigned int processor)
 	else
 		device = devices.back();
 
-	//auto vendor = device.getInfo<CL_DEVICE_VENDOR>();
+//	auto vendor = device.getInfo<CL_DEVICE_VENDOR>();
+//	auto name = device.getInfo<CL_DEVICE_NAME>();
 
 	std::ifstream fp(file);
 	std::string src(std::istreambuf_iterator<char>(fp), (std::istreambuf_iterator<char>()));

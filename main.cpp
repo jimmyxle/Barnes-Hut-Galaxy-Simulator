@@ -7,24 +7,24 @@ int main()
 	std::cout << "Galaxy Simulator" << std::endl;
 	//-----------------------
 	//set # planets per galaxy
-	int NUM_P = 160;
+	int NUM_P = 128;
 	//mass of center particle of each
-	float solar_mass = 1e7f;
-	float solar_mass_2 = 0.4e7f;
+	float solar_mass = 1.0e7f;
+	float solar_mass_2 =1.0e7f;
 
 	//initial velocity , x variable
-	float initial_x = 0.50f;
-	float initial_y = 0.5f;
+	float initial_x = 0.00f;
+	float initial_y = 0.007f;
 
 
-	Galaxy* g1 = new Galaxy(0.2f, 0.2f, solar_mass , NUM_P, initial_x, initial_y, 0.2f);
+	Galaxy* g1 = new Galaxy(0.-0.5f, -0.5f, solar_mass , NUM_P, initial_x, initial_y, 0.2f);
 
 	Galaxy* g2 = nullptr;
 
 	/* Uncomment this to add another galaxy */
 
 	
-	g2 = new Galaxy( 0.0f, 0.0f, solar_mass_2 , NUM_P, 0, 0, 0.2f );
+	g2 = new Galaxy( 0.5f, 0.5f, solar_mass_2 , NUM_P, initial_x, -initial_y, 0.2f );
 	g1->add_galaxy(*g2, -1 * initial_x, initial_x);
 	
 

@@ -33,9 +33,11 @@ public:
 	float clockToMilliseconds(clock_t ticks);
 	static std::vector<ParticleData*> renegades;
 
+
 private:
 	ParticleData particle; 
 	std::vector<ParticleData*> allParticles;
+
 	QuadNode * root;
 	float x;
 	float y;
