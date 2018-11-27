@@ -1,7 +1,7 @@
 #include "OpenCLHelper.h"
 
 
-cl::Program CreateProgram(const std::string& file, unsigned int processor)
+cl::Program* CreateProgram(const std::string& file, unsigned int processor)
 {
 
 	std::vector<cl::Device> devices = get_running_devices();
@@ -12,16 +12,22 @@ cl::Program CreateProgram(const std::string& file, unsigned int processor)
 	else
 		device = devices.back();
 
+	auto name2 = device.getInfo<CL_DEVICE_NAME>();
+
+
 //	auto vendor = device.getInfo<CL_DEVICE_VENDOR>();
 //	auto name = device.getInfo<CL_DEVICE_NAME>();
-
+	cl_int err = 0;
 	std::ifstream fp(file);
 	std::string src(std::istreambuf_iterator<char>(fp), (std::istreambuf_iterator<char>()));
-	cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.length() + 1));
-	cl::Context context(device);
-	cl::Program program(context, sources);
+	cl::Program::Sources sources(1, std::make_pair(src.c_str(), src.length() + 1) );
+	cl::Context* context = new  cl::Context(device, &err);
+	cl::Program* program = new  cl::Program(*context, sources, &err);
 
-	auto err = program.build("-cl-std=CL1.2");
+	auto context2 = program->getInfo<CL_PROGRAM_CONTEXT>();
+	auto devices2 = context2.getInfo<CL_CONTEXT_DEVICES>();
+
+	err = program->build("-cl-std=CL1.2");
 
 	return program;
 
