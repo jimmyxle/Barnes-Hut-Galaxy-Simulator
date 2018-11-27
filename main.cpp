@@ -34,7 +34,7 @@ int main()
 	bool repeat = true;
 	int a = 0;
 
-	while (repeat)
+	do 
 	{
 		if (g2)
 		{
@@ -42,7 +42,7 @@ int main()
 		}
 		else
 			g1->running_display();
-	}
+	} while (!repeat);
 	
 	//----------------------
 	

@@ -243,22 +243,39 @@ int Galaxy::running_display()
 
 	std::vector<cl_float2> forces_copy(NUMBER_PARTICLES);
 	
+	std::vector<cl_float4> outVec(max);
+
 
 	/* opencl context*/
-	auto program = CreateProgram("calc_dist.cl", 1); //set to 0 for cpu, set to 1 for gpu
-		//create context
-	auto context = program.getInfo<CL_PROGRAM_CONTEXT>();
-	auto devices = context.getInfo<CL_CONTEXT_DEVICES>();
+	auto program2 = CreateProgram("force_check.cl", 0);
+	auto context2 = program2->getInfo<CL_PROGRAM_CONTEXT>();
+	auto devices2 = context2.getInfo<CL_CONTEXT_DEVICES>();
+	_ASSERT(devices2.size() > 0);
 
+
+	auto program = CreateProgram("calc_dist.cl", 1); //set to 0 for cpu, set to 1 for gpu
+
+		//create context
+	auto context = program->getInfo<CL_PROGRAM_CONTEXT>();
+	auto devices = context.getInfo<CL_CONTEXT_DEVICES>();
 	_ASSERT(devices.size() > 0);
+
+
+
 	auto& device = devices.back();
+	auto& device_cpu = devices2.back();
+
+	auto name = device.getInfo<CL_DEVICE_NAME>();
+	auto name_cpu =  device_cpu.getInfo<CL_DEVICE_NAME>();
 
 	cl_int err = 0;
-	cl::Kernel kernel(program, "calc_dist", &err);
+	cl::Kernel kernel(*program, "calc_dist", &err);
+	cl::Kernel kernel_cpu(*program2, "force_check", &err);
+	//auto workgrpsz = kernel_cpu.getWorkGroupInfo < CL_KERNEL_WORK_GROUP_SIZE>(device_cpu, &err);
 	//auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
 	auto workGroupSize = max;
-	std::vector<cl_float4> outVec(max);
 	cl::CommandQueue queue(context, device);
+	cl::CommandQueue queue_cpu(context2, device_cpu);
 
 	/* clock stuff */
 	clock_t deltaTime = 0;
@@ -307,38 +324,46 @@ int Galaxy::running_display()
 			root->calcForce(*(allParticles[i]), (forces[i]));
 
 
-			//prevents NaN problems
-			if (forces[i].x != forces[i].x)
-				forces[i].x = 0;
 
-			if (forces[i].y != forces[i].y)
-				forces[i].y = 0;
+			////prevents NaN problems
+			//if (forces[i].x != forces[i].x)
+			//	forces[i].x = 0;
 
-			//prevents points from accelerating too far from the center
-			float max = 1.0 / 2;
-			if (forces[i].x >= max)
-			{
-				forces[i].x = max;
-			}
-			if (forces[i].x < -max)
-			{
-				forces[i].x = -max;
-			}
+			//if (forces[i].y != forces[i].y)
+			//	forces[i].y = 0;
 
-			if (forces[i].y >= max)
-			{
-				forces[i].y = max;
-			}
-			if (forces[i].y < -max)
-			{
-				forces[i].y = -max;
-			}
+			////prevents points from accelerating too far from the center
+			//float max = 1.0 / 2;
+			//if (forces[i].x >= max)
+			//{
+			//	forces[i].x = max;
+			//}
+			//if (forces[i].x < -max)
+			//{
+			//	forces[i].x = -max;
+			//}
+
+			//if (forces[i].y >= max)
+			//{
+			//	forces[i].y = max;
+			//}
+			//if (forces[i].y < -max)
+			//{
+			//	forces[i].y = -max;
+			//}
 
 			forces_copy[i].x = forces[i].x;
 			forces_copy[i].y = forces[i].y;
 
 		}
+		cl::Buffer buf_force_copy(context2, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float2)*max, forces_copy.data(), &err);
+		cl::Buffer buf_out_force_copy(context2, CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, sizeof(cl_float2)*max, NULL, &err);
 
+		err = kernel_cpu.setArg(0, buf_force_copy);
+		err = kernel_cpu.setArg(1, buf_out_force_copy);
+
+		err = queue_cpu.enqueueNDRangeKernel(kernel_cpu, cl::NullRange, cl::NDRange(max), cl::NDRange(workGroupSize));
+		err = queue_cpu.enqueueReadBuffer(buf_out_force_copy, CL_TRUE, 0, sizeof(cl_float2)*max, forces_copy.data());
 		/*
 		here we d the opencl call
 		*/
@@ -455,24 +480,34 @@ int Galaxy::two_running_display(Galaxy& second)
 
 	std::vector<cl_float2> forces_copy(NUMBER_PARTICLES);
 
+	auto program2 = CreateProgram("force_check.cl", 0);
+	auto context2 = program2->getInfo<CL_PROGRAM_CONTEXT>();
+	auto devices2 = context2.getInfo<CL_CONTEXT_DEVICES>();
+	_ASSERT(devices2.size() > 0);
 
 	/* opencl context*/
 	auto program = CreateProgram("calc_dist.cl", 1); //set to 0 for cpu, set to 1 for gpu
 	//create context
-	auto context = program.getInfo<CL_PROGRAM_CONTEXT>();
+	auto context = program->getInfo<CL_PROGRAM_CONTEXT>();
 	auto devices = context.getInfo<CL_CONTEXT_DEVICES>();
 	//auto devic   = context.getInfo<CL_CONTEXT_DEVICES>();
 	
 
 	_ASSERT(devices.size() > 0);
 	auto& device = devices.back();
+	auto& device_cpu = devices2.back();
+
 
 	cl_int err = 0;
-	cl::Kernel kernel(program, "calc_dist", &err);
+	cl::Kernel kernel(*program, "calc_dist", &err);
+	cl::Kernel kernel_cpu(*program2, "force_check", &err);
+
 	//auto workGroupSize = kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device, &err);
 	auto workGroupSize = max;
 	std::vector<cl_float4> outVec(max);
 	cl::CommandQueue queue(context, device);
+
+	cl::CommandQueue queue_cpu(context2, device_cpu);
 
 
 	clock_t deltaTime = 0;
@@ -532,31 +567,31 @@ int Galaxy::two_running_display(Galaxy& second)
 			root->calcForce(*(allParticles[i]), (forces[i]));
 
 			//prevents NaN problems
-			if (forces[i].x != forces[i].x)
-				forces[i].x = 0;
+			//if (forces[i].x != forces[i].x)
+			//	forces[i].x = 0;
 
-			if (forces[i].y != forces[i].y)
-				forces[i].y = 0;
+			//if (forces[i].y != forces[i].y)
+			//	forces[i].y = 0;
 
-			//prevents points from accelerating too far from the center
-			float max = 1.0 / 2;
-			if (forces[i].x >= max)
-			{
-				forces[i].x = max;
-			}
-			if (forces[i].x < -max)
-			{
-				forces[i].x = -max;
-			}
+			////prevents points from accelerating too far from the center
+			//float max = 1.0 / 2;
+			//if (forces[i].x >= max)
+			//{
+			//	forces[i].x = max;
+			//}
+			//if (forces[i].x < -max)
+			//{
+			//	forces[i].x = -max;
+			//}
 
-			if (forces[i].y >= max)
-			{
-				forces[i].y = max;
-			}
-			if (forces[i].y < -max)
-			{
-				forces[i].y = -max;
-			}
+			//if (forces[i].y >= max)
+			//{
+			//	forces[i].y = max;
+			//}
+			//if (forces[i].y < -max)
+			//{
+			//	forces[i].y = -max;
+			//}
 
 			forces_copy[i].x = forces[i].x;
 			forces_copy[i].y = forces[i].y;
@@ -568,6 +603,15 @@ int Galaxy::two_running_display(Galaxy& second)
 		/*
 		here we do the opencl call
 		*/
+
+		cl::Buffer buf_force_copy(context2, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float2)*max, forces_copy.data(), &err);
+		cl::Buffer buf_out_force_copy(context2, CL_MEM_WRITE_ONLY | CL_MEM_HOST_READ_ONLY, sizeof(cl_float2)*max, NULL, &err);
+
+		err = kernel_cpu.setArg(0, buf_force_copy);
+		err = kernel_cpu.setArg(1, buf_out_force_copy);
+
+		err = queue_cpu.enqueueNDRangeKernel(kernel_cpu, cl::NullRange, cl::NDRange(max), cl::NDRange(workGroupSize));
+		err = queue_cpu.enqueueReadBuffer(buf_out_force_copy, CL_TRUE, 0, sizeof(cl_float2)*max, forces_copy.data());
 		
 		
 	//	test_start = clock();
