@@ -16,7 +16,7 @@ __kernel void force_check(
 	if (temp_force.y != temp_force.y)
 		temp_force.y = 0;
 		
-	float max = 25.0f;
+	float max = 1.0f/25.0f;
 	
 	if (temp_force.x >= max)
 		temp_force.x = max;
@@ -34,36 +34,3 @@ __kernel void force_check(
 	out_force[globalId].y = temp_force.y;
 	/**/
 }
-/*
-//prevents NaN problems
-if (forces[i].x != forces[i].x)
-forces[i].x = 0;
-
-if (forces[i].y != forces[i].y)
-forces[i].y = 0;
-
-//prevents points from accelerating too far from the center
-float max = 1.0 / 2;
-if (forces[i].x >= max)
-{
-forces[i].x = max;
-}
-if (forces[i].x < -max)
-{
-forces[i].x = -max;
-}
-
-if (forces[i].y >= max)
-{
-forces[i].y = max;
-}
-if (forces[i].y < -max)
-{
-forces[i].y = -max;
-}
-
-forces_copy[i].x = forces[i].x;
-forces_copy[i].y = forces[i].y;
-
-
-*/

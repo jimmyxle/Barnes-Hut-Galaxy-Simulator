@@ -28,43 +28,4 @@ __kernel void calc_dist(
 	out_pos[globalId].z = local_pos[localId].z;
 	out_pos[globalId].w = local_pos[localId].w;
 }
-/*
-	
-		
-	float2 force;
-	force.x = local_force[localId].x;
-	force.y = local_force[localId].y;
 
-	float4 position;
-	position.x = local_pos[localId].x;
-	position.y = local_pos[localId].y;
-	position.z = local_pos[localId].z;
-	position.w = local_pos[localId].w;
-	
-	float2 force;
-	force.x = local_force[localId].x;
-	force.y = local_force[localId].y;
-
-	float4 position;
-	position.x = local_pos[localId].x;
-	position.y = local_pos[localId].y;
-	position.z = local_pos[localId].z;
-	position.w = local_pos[localId].w;
-	
-
-	//velocities
-	position.z += force.x * TIME;
-	position.w += force.y * TIME;
-
-	//positions
-	position.x += position.z * TIME;
-	position.y += position.w * TIME;
-
-	//bounce particles off the borders
-
-	
-	out_pos[globalId].x = position.x;
-	out_pos[globalId].y = position.y;
-	out_pos[globalId].z = position.z;
-	out_pos[globalId].w = position.w;
-*/

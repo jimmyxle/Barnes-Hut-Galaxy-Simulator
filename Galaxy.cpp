@@ -1,7 +1,6 @@
 #include "Galaxy.h"
 
 
-
 Galaxy::Galaxy()
 {
 	NUMBER_PARTICLES = 300;
@@ -309,48 +308,9 @@ int Galaxy::running_display()
 		
 		displayParticles(allParticles, window);
 
-
-
-
-
-		/**/
-		//calc forces 
-		//data parallel
-
-	
-
 		for (unsigned int i = 0; i < max; i++)
 		{
 			root->calcForce(*(allParticles[i]), (forces[i]));
-
-
-
-			////prevents NaN problems
-			//if (forces[i].x != forces[i].x)
-			//	forces[i].x = 0;
-
-			//if (forces[i].y != forces[i].y)
-			//	forces[i].y = 0;
-
-			////prevents points from accelerating too far from the center
-			//float max = 1.0 / 2;
-			//if (forces[i].x >= max)
-			//{
-			//	forces[i].x = max;
-			//}
-			//if (forces[i].x < -max)
-			//{
-			//	forces[i].x = -max;
-			//}
-
-			//if (forces[i].y >= max)
-			//{
-			//	forces[i].y = max;
-			//}
-			//if (forces[i].y < -max)
-			//{
-			//	forces[i].y = -max;
-			//}
 
 			forces_copy[i].x = forces[i].x;
 			forces_copy[i].y = forces[i].y;
@@ -365,10 +325,8 @@ int Galaxy::running_display()
 		err = queue_cpu.enqueueNDRangeKernel(kernel_cpu, cl::NullRange, cl::NDRange(max), cl::NDRange(workGroupSize));
 		err = queue_cpu.enqueueReadBuffer(buf_out_force_copy, CL_TRUE, 0, sizeof(cl_float2)*max, forces_copy.data());
 		/*
-		here we d the opencl call
+		here we do the opencl calls
 		*/
-		
-	
 
 			cl::Buffer buf_force(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float2)*max, forces_copy.data(), &err);
 			cl::Buffer buf_pos(context, CL_MEM_READ_ONLY | CL_MEM_HOST_NO_ACCESS | CL_MEM_COPY_HOST_PTR, sizeof(cl_float4)*max, positions.data(), &err);
@@ -379,12 +337,8 @@ int Galaxy::running_display()
 			err = kernel.setArg(3, sizeof(cl_float2)*workGroupSize, nullptr); //local for forces
 			err = kernel.setArg(4, sizeof(cl_float4)*workGroupSize, nullptr); //local for positions 
 
-			
 			err = queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(max), cl::NDRange(workGroupSize));
-
 			err = queue.enqueueReadBuffer(outBuf_pos, CL_TRUE, 0, sizeof(cl_float4)*outVec.size(), outVec.data());
-
-		
 
 			for (unsigned int i = 0; i < max; i++)
 			{
@@ -566,32 +520,6 @@ int Galaxy::two_running_display(Galaxy& second)
 		{
 			root->calcForce(*(allParticles[i]), (forces[i]));
 
-			//prevents NaN problems
-			//if (forces[i].x != forces[i].x)
-			//	forces[i].x = 0;
-
-			//if (forces[i].y != forces[i].y)
-			//	forces[i].y = 0;
-
-			////prevents points from accelerating too far from the center
-			//float max = 1.0 / 2;
-			//if (forces[i].x >= max)
-			//{
-			//	forces[i].x = max;
-			//}
-			//if (forces[i].x < -max)
-			//{
-			//	forces[i].x = -max;
-			//}
-
-			//if (forces[i].y >= max)
-			//{
-			//	forces[i].y = max;
-			//}
-			//if (forces[i].y < -max)
-			//{
-			//	forces[i].y = -max;
-			//}
 
 			forces_copy[i].x = forces[i].x;
 			forces_copy[i].y = forces[i].y;
