@@ -3,6 +3,11 @@
 
 Simulator that calculates forces between N number of particles. Decreases the number of calculations from N^2 to NLOG(N) by only calculating the force between particles if the distance between particles are smaller than a certain threshold. 
 
+### To run:
+Have Visual Studio 17
+Have openCL installed
+Have GLFW installed
+
 ### Software used:
 openGL
 openCL
